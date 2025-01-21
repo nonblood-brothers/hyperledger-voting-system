@@ -1,0 +1,24 @@
+{
+    "extends": "@tsconfig/node18/tsconfig.json",
+    "compilerOptions": {
+        "outDir": "dist",
+        "declaration": true,
+        "declarationMap": true,
+        "sourceMap": true,
+        "lib": [
+            "ESNext",
+        ],
+        "esModuleInterop": true,
+        "allowJs": true,
+        "noUnusedLocals": true,
+        "noImplicitReturns": true,
+        "noUncheckedIndexedAccess": true,
+        "forceConsistentCasingInFileNames": true
+    },
+    "include": [
+        "./src/**/*"
+    ],
+    "exclude": [
+        "./src/**/*.spec.ts"
+    ]
+}
