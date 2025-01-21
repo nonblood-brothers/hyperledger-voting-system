@@ -37,7 +37,7 @@ async function main(): Promise<void> {
         const network = gateway.getNetwork(config.channelName);
         const contract = network.getContract(config.chaincodeName);
 
-        await server(contract)
+        server(contract)
     } finally {
         gateway.close();
         client.close();

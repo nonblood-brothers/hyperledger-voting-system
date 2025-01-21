@@ -1,17 +1,16 @@
 import { Contract } from "@hyperledger/fabric-gateway"
 import express from 'express'
-import { getApiRouter } from "../api-router"
-import config from "../config"
+import { getApiRouter } from "./router/api.router"
+import config from "./config"
 
-export async function server(contract: Contract) {
+export function server(contract: Contract) {
     const app = express()
 
+    app.use('/api', getApiRouter(contract))
     app.get('/', (req, res) => {
         res.setHeader('Content-Type', 'application/json')
         res.status(403).send({ message: 'You shall not pass!' })
     })
-
-    app.use('/api', getApiRouter(contract))
 
     app.listen(config.port, (err) => {
         if (err) {
