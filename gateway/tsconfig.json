@@ -13,12 +13,35 @@
         "noUnusedLocals": true,
         "noImplicitReturns": true,
         "noUncheckedIndexedAccess": true,
-        "forceConsistentCasingInFileNames": true
+        "forceConsistentCasingInFileNames": true,
+        "paths": {
+            "@handler/*": [
+                "./src/handler/*"
+            ],
+            "@constant/*": [
+                "./src/constant/*"
+            ],
+            "@helper/*": [
+                "./src/helper/*"
+            ],
+            "@middleware/*": [
+                "./src/middleware/*"
+            ],
+            "@router/*": [
+                "./src/router/*"
+            ],
+            "@exception/*": [
+                "./src/exception/*"
+            ],
+            "@util/*": [
+                "./src/util/*"
+            ]
+        }
     },
     "include": [
         "./src/**/*"
     ],
     "exclude": [
         "./src/**/*.spec.ts"
-    ]
+    ],
 }

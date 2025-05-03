@@ -1,5 +1,5 @@
 import * as path from 'path';
-import { envOrDefault } from './utils/env-or-default';
+import { envOrDefault } from './util/env-or-default';
 
 const testNetworkPath = envOrDefault('TEST_NETWORK_PATH', path.resolve(__dirname, '..', '..', 'network', 'test-network'))
 const cryptoPath = envOrDefault('CRYPTO_PATH', path.resolve(testNetworkPath, 'organizations', 'peerOrganizations', 'org1.example.com'));

@@ -1,6 +1,6 @@
-import { Request, Response, NextFunction } from 'express'
+import { Request, Response, NextFunction, RequestHandler } from 'express'
 
-export async function getAuthMiddleware(jwtKey: string) {
+export function getAuthMiddleware(jwtKey: string): RequestHandler {
     return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
 
     }
