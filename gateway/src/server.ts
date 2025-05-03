@@ -10,6 +10,7 @@ import { JWT_SECRET_KEY } from '@/constant/env.constant'
 import { getEnv } from '@/util/get-env';
 import { getProtectedMethodsMiddleware } from '@/middleware/protected-methods.middleware';
 import { PROTECTED_METHODS } from '@/constant/protected-methods.constant';
+import { getExceptionFilterMiddleware } from '@/middleware/exception-filter.middleware';
 
 export function server(contract: Contract) {
     const app = express()
@@ -26,6 +27,8 @@ export function server(contract: Contract) {
         res.setHeader('Content-Type', 'application/json')
         res.status(403).send({ message: 'You shall not pass!' })
     })
+
+    app.use(getExceptionFilterMiddleware())
 
     app.listen(config.port, (err) => {
         if (err) {

@@ -10,6 +10,5 @@ export function getLoggerMiddleware(): RequestHandler {
         const body = JSON.stringify(req.body)
         logger.log(`Received ${req.method} request on ${req.url} with body: ${body}`, [traceId])
         next()
-        logger.log(`Completed ${req.method} request on ${req.url}`, [traceId])
     }
 }

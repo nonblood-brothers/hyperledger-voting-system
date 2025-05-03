@@ -1,7 +1,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 #
-FROM node:16 AS builder
+FROM node:22-alpine AS builder
 
 WORKDIR /usr/src/app
 
@@ -11,11 +11,11 @@ ENV npm_config_cache=/usr/src/app
 RUN npm ci && npm run package
 
 
-FROM node:16 AS production
+FROM node:22 AS production
 ARG CC_SERVER_PORT
 
 # Setup tini to work better handle signals
-ENV TINI_VERSION v0.19.0
+ENV TINI_VERSION=v0.19.0
 ENV PLATFORM=amd64
 ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini-${PLATFORM} /tini
 RUN chmod +x /tini
@@ -28,7 +28,7 @@ COPY --chown=node:node docker/docker-entrypoint.sh /usr/src/app/docker-entrypoin
 
 RUN npm ci --omit=dev && npm cache clean --force
 
-ENV PORT $CC_SERVER_PORT
+ENV PORT=$CC_SERVER_PORT
 EXPOSE $CC_SERVER_PORT
 ENV NODE_ENV=production
 

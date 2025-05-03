@@ -7,7 +7,8 @@ export function getSubmitTransactionHandler(contract: Contract): RequestHandler 
     return async (req, res) => {
         const { method, args } = req.body as { method: string, args: string[] };
 
-        const result = await submitTransactionAndGetResult(contract, method, ...args)
+        const actualArgs = req.protectedMethod ? [req.username ?? '', ...args] : args
+        const result = await submitTransactionAndGetResult(contract, method, ...actualArgs)
 
         res.set('Content-Type', 'application/json; charset=utf-8')
             .send({ status: 'OK', submitted: true, result })
@@ -18,7 +19,8 @@ export function getEvaluateTransactionHandler(contract: Contract): RequestHandle
     return async (req, res) => {
         const { method, args } = req.body as { method: string, args: string[] };
 
-        const result = await evaluateTransactionAndGetResult(contract, method, ...args)
+        const actualArgs = req.protectedMethod ? [req.username ?? '', ...args] : args
+        const result = await evaluateTransactionAndGetResult(contract, method, ...actualArgs)
 
         res.set('Content-Type', 'application/json; charset=utf-8')
             .status(200)

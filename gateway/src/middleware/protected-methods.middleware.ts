@@ -2,7 +2,7 @@ import { NextFunction, Request, RequestHandler, Response } from 'express'
 
 export function getProtectedMethodsMiddleware(protectedMethods: string[]): RequestHandler {
     return (req: Request, res: Response, next: NextFunction): void => {
-        if (!req.url.startsWith('/tx')) {
+        if (!req.url.startsWith('/api/tx')) {
             req.skipAuth = true;
             next();
             return;
@@ -14,6 +14,7 @@ export function getProtectedMethodsMiddleware(protectedMethods: string[]): Reque
             req.skipAuth = true
         }
 
+        req.protectedMethod = true;
         next()
     }
 }

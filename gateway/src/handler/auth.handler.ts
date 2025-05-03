@@ -13,8 +13,8 @@ export function getAuthHandler(contract: Contract, jwtKey: string): RequestHandl
         const { username, password, secretKey } = req.body as { username: string; password: string; secretKey: string; };
 
         const user = await evaluateTransactionAndGetResult<{ passwordHash: string; secretKeyHash: string; }>(contract, 'GetExistingUser', username)
-        const passwordHash = crypto.createHash('sha3').update(password).digest().toString()
-        const secretKeyHash = crypto.createHash('sha3').update(secretKey).digest().toString()
+        const passwordHash = crypto.createHash('sha256').update(password).digest().toString('hex')
+        const secretKeyHash = crypto.createHash('sha256').update(secretKey).digest().toString('hex')
 
         if (user.passwordHash !== passwordHash || user.secretKeyHash !== secretKeyHash) {
             throw new BadRequestException('Wrong password or secret key!')
@@ -22,6 +22,6 @@ export function getAuthHandler(contract: Contract, jwtKey: string): RequestHandl
 
         const token = sign({ username } satisfies TokenPayload as object, jwtKey)
 
-        res.sendStatus(200).send({ token })
+        res.status(200).send({ token })
     }
 }

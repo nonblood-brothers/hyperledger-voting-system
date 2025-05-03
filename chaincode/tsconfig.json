@@ -1,17 +1,21 @@
 {
-    "$schema": "https://json.schemastore.org/tsconfig",
     "extends": "@tsconfig/node18/tsconfig.json",
     "compilerOptions": {
-        "experimentalDecorators": true,
-        "emitDecoratorMetadata": true,
+        "outDir": "dist",
+        "baseUrl": "./",
         "declaration": true,
         "declarationMap": true,
         "sourceMap": true,
-        "outDir": "dist",
-        "strict": true,
+        "esModuleInterop": true,
+        "allowJs": true,
         "noUnusedLocals": true,
         "noImplicitReturns": true,
-        "forceConsistentCasingInFileNames": true
+        "noUncheckedIndexedAccess": true,
+        "forceConsistentCasingInFileNames": true,
+        "experimentalDecorators": true,
+        "emitDecoratorMetadata": true,
     },
-    "include": ["src/"]
+    "include": [
+        "./src/**/*"
+    ],
 }

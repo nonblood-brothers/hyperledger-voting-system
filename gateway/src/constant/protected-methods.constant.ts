@@ -1,1 +1,1 @@
-export const PROTECTED_METHODS = ['GetExistingUser'];
+export const PROTECTED_METHODS = ['GetExistingUser', 'IsAuthenticated'];
