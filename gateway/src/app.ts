@@ -1,11 +1,13 @@
-import * as grpc from '@grpc/grpc-js';
-import { connect, hash, Identity, Signer, signers } from '@hyperledger/fabric-gateway';
 import * as crypto from 'crypto';
 import { promises as fs } from 'fs';
 import * as path from 'path';
 
 import config from './config'
-import { server } from './server';
+
+import { server } from '@/server';
+
+import { connect, hash, Identity, Signer, signers } from '@hyperledger/fabric-gateway';
+import * as grpc from '@grpc/grpc-js';
 
 async function main(): Promise<void> {
     displayInputParameters();
@@ -33,15 +35,15 @@ async function main(): Promise<void> {
         },
     });
 
-    try {
-        const network = gateway.getNetwork(config.channelName);
-        const contract = network.getContract(config.chaincodeName);
+    const network = gateway.getNetwork(config.channelName);
+    const contract = network.getContract(config.chaincodeName);
 
-        server(contract)
-    } finally {
+    server(contract)
+
+    process.on('exit', () => {
         gateway.close();
         client.close();
-    }
+    })
 }
 
 main().catch((error: unknown) => {

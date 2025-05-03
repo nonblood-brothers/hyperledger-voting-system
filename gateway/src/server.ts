@@ -1,11 +1,15 @@
-import { Contract } from "@hyperledger/fabric-gateway"
+import config from './config'
+
+import { getApiRouter } from '@/router/api.router'
+
+import { Contract } from '@hyperledger/fabric-gateway'
 import express from 'express'
-import { getApiRouter } from "./router/api.router"
-import config from "./config"
-import { getLoggerMiddleware } from "@middleware/logger.middleware"
-import { getAuthMiddleware } from "@middleware/auth.middleware"
-import { getEnv } from "@helper/env.helper"
-import { JWT_SECRET_KEY } from "@constant/env.constant"
+import { getLoggerMiddleware } from '@/middleware/logger.middleware'
+import { getAuthMiddleware } from '@/middleware/auth.middleware'
+import { JWT_SECRET_KEY } from '@/constant/env.constant'
+import { getEnv } from '@/util/get-env';
+import { getProtectedMethodsMiddleware } from '@/middleware/protected-methods.middleware';
+import { PROTECTED_METHODS } from '@/constant/protected-methods.constant';
 
 export function server(contract: Contract) {
     const app = express()
@@ -13,6 +17,7 @@ export function server(contract: Contract) {
     app.use(express.json())
 
     app.use(getLoggerMiddleware())
+    app.use(getProtectedMethodsMiddleware(PROTECTED_METHODS))
     app.use(getAuthMiddleware(getEnv(JWT_SECRET_KEY)))
 
     app.use('/api', getApiRouter(contract, getEnv(JWT_SECRET_KEY)))

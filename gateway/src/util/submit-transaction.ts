@@ -1,5 +1,6 @@
-import { Contract } from "@hyperledger/fabric-gateway";
-import { decodeAndParseUtf8Json } from "./decode-utf8-json";
+import { decodeAndParseUtf8Json } from '@/util/decode-utf8-json';
+
+import { Contract } from '@hyperledger/fabric-gateway';
 
 export async function submitTransactionAndGetResult<T = unknown>(contract: Contract, methodName: string, ...args: string[]): Promise<T> {
     const resultBytes = await contract.submitTransaction(methodName, ...args);
