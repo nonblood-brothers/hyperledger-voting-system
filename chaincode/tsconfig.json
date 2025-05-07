@@ -8,7 +8,7 @@
         "sourceMap": true,
         "esModuleInterop": true,
         "allowJs": true,
-        "noUnusedLocals": true,
+        "noUnusedLocals": false,
         "noImplicitReturns": true,
         "noUncheckedIndexedAccess": true,
         "forceConsistentCasingInFileNames": true,

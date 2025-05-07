@@ -1,25 +1,34 @@
-import { User } from './user';
+import { User } from './object/user.object';
+import { UserKycStatus } from './enum/user-kyc-status.enum';
+import { UserRepository } from './repository/user.repository';
 
 import { Context, Contract, Info, Returns, Transaction } from 'fabric-contract-api';
-import sortKeysRecursive from 'sort-keys-recursive';
 
 @Info({ title: 'VotingSystem', description: 'Smart contract for voting system' })
 export class VotingSystemContract extends Contract {
+    private userRepository: UserRepository;
+
+    constructor() {
+        super()
+        this.userRepository = new UserRepository()
+    }
+
     @Transaction(false)
     @Returns('string')
     public async GetExistingUser(ctx: Context, username: string): Promise<string> {
-        const user = await ctx.stub.getState(`user:${username}`)
-        if (user.length === 0) throw new Error(`User ${username} does not exist`)
+        const user = await this.userRepository.getUser(ctx, username)
+        if (user) throw new Error(`User ${username} does not exist`)
 
-        return user.toString()
+        return JSON.stringify(user)
     }
 
     @Transaction()
     public async RegisterUser(ctx: Context, username: string, passwordHash: string, secretKeyHash: string): Promise<void> {
-        const user = await ctx.stub.getState(`user:${username}`)
-        if (user.length > 0) throw new Error(`User ${username} already exists`)
+        const user = await this.userRepository.getUser(ctx, username)
+        if (user) throw new Error(`User ${username} already exists`)
 
-        await ctx.stub.putState(`user:${username}`, Buffer.from(JSON.stringify(sortKeysRecursive({ username, passwordHash, secretKeyHash } satisfies User))))
+        const newUser = { username, passwordHash, secretKeyHash, kycStatus: UserKycStatus.PENDING, createdAt: new Date(), updatedAt: new Date() } satisfies User
+        await this.userRepository.saveUser(ctx, username, newUser)
     }
 
     @Transaction(false)
