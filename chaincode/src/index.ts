@@ -1,8 +1,5 @@
-/*
- * SPDX-License-Identifier: Apache-2.0
- */
+import { VotingSystemContract } from './votingSystem.contract';
 
-import {type Contract} from 'fabric-contract-api';
-import {AssetTransferContract} from './assetTransfer';
+import { type Contract } from 'fabric-contract-api';
 
-export const contracts: typeof Contract[] = [AssetTransferContract];
+export const contracts: typeof Contract[] = [VotingSystemContract];

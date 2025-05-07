@@ -1,5 +1,4 @@
-import { Asset } from './asset';
-import { User } from './user';
+import { Asset } from '.asset';
 
 import { Context, Contract, Info, Returns, Transaction } from 'fabric-contract-api';
 import sortKeysRecursive from 'sort-keys-recursive';
@@ -63,31 +62,6 @@ export class AssetTransferContract extends Contract {
             await ctx.stub.putState(asset.ID, Buffer.from(JSON.stringify(sortKeysRecursive(asset))));
             console.info(`Asset ${asset.ID} initialized`);
         }
-    }
-
-    @Transaction(false)
-    @Returns('string')
-    public async GetExistingUser(ctx: Context, username: string): Promise<string> {
-        const user = await ctx.stub.getState(`user:${username}`)
-        if (user.length === 0) throw new Error(`User ${username} does not exist`)
-
-        return user.toString()
-    }
-
-    @Transaction()
-    public async RegisterUser(ctx: Context, username: string, passwordHash: string, secretKeyHash: string): Promise<void> {
-        const user = await ctx.stub.getState(`user:${username}`)
-        if (user.length > 0) throw new Error(`User ${username} already exists`)
-
-        await ctx.stub.putState(`user:${username}`, Buffer.from(JSON.stringify(sortKeysRecursive({ username, passwordHash, secretKeyHash } satisfies User))))
-    }
-
-    @Transaction(false)
-    @Returns('string')
-    public IsAuthenticated(ctx: Context, currentUsername: string): string {
-        if (currentUsername.length > 0) return JSON.stringify({ authenticated: true, username: currentUsername })
-
-        throw new Error('User is not authenticated')
     }
 
     // CreateAsset issues a new asset to the world state with given details.
