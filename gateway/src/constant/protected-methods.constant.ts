@@ -1,1 +1,1 @@
-export const PROTECTED_METHODS = ['IsAuthenticated', 'IsKycVerified', 'GetKycApplicationList', 'UpdateKycApplicationStatus'];
+export const PROTECTED_METHODS = ['IsAuthenticated', 'IsKycVerified', 'GetKycApplicationListByStatus', 'UpdateKycApplicationStatus'];

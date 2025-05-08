@@ -30,7 +30,6 @@ export class KycApplicationRepository extends ObjectRepository {
         const result: KYCApplication[] = []
 
         for await (const iteratorElement of iterator) {
-            console.log(iteratorElement)
             if ((iteratorElement.value as KYCApplication | undefined)?.status === status) {
                 result.push(iteratorElement.value as KYCApplication)
             }

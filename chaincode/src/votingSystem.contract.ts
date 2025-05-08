@@ -54,7 +54,7 @@ export class VotingSystemContract extends Contract {
     @Transaction()
     @ProtectedMethod({ roles: [UserRole.ADMIN] })
     @Returns('string')
-    public async GetKycApplicationList(ctx: Context, studentIdNumber: string, status: KycApplicationStatus): Promise<string> {
+    public async GetKycApplicationListByStatus(ctx: Context, studentIdNumber: string, status: KycApplicationStatus): Promise<string> {
         const data = await this.kycApplicationRepository.getKycApplicationsByStatus(ctx, status)
 
         return JSON.stringify({ currentStudentId: studentIdNumber, data })
