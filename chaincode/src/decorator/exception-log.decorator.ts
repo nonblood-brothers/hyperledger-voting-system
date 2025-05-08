@@ -1,3 +1,6 @@
+/**
+ * This decorator is used solely for debugging purposes and must be removed after implementation is considered complete
+ */
 export function ExceptionLog() {
     return function (target: unknown, propertyKey: string, descriptor: PropertyDescriptor) {
         const originalMethod = descriptor.value as ((...args: unknown[]) => Promise<unknown>);
