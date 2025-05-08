@@ -11,7 +11,7 @@ export function getAuthMiddleware(jwtKey: string): RequestHandler {
 
         try {
             const tokenInfo = jwt.verify(token || '', jwtKey) as TokenPayload
-            req.username = tokenInfo.username
+            req.studentIdNumber = tokenInfo.studentIdNumber
         } catch (e) {
             res.status(401).send({ status: 'UNAUTHORIZED' })
             return

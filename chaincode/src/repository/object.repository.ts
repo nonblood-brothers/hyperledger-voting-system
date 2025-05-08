@@ -7,7 +7,16 @@ import sortKeysRecursive from 'sort-keys-recursive';
 
 export abstract class ObjectRepository {
     protected async saveObject(ctx: Context, objectIdentifier: string, id: string, object: object): Promise<void> {
-        await ctx.stub.putState(`${objectIdentifier}:${id}`, Buffer.from(JSON.stringify(sortKeysRecursive(object))))
+        await ctx.stub.putState(`${objectIdentifier}:${id}`, Buffer.from(JSON.stringify(sortKeysRecursive({ ...object }))))
+    }
+
+    protected async updateObject<T extends object>(ctx: Context, objectIdentifier: string, id: string, object: Partial<T>): Promise<T | null> {
+        const oldObject = await this.getObject<T>(ctx, objectIdentifier, id)
+        if (!oldObject) return null
+
+        await this.saveObject(ctx, objectIdentifier, id, { ...oldObject, ...object })
+
+        return await this.getObject<T>(ctx, objectIdentifier, id) as T;
     }
 
     protected async deleteObject(ctx: Context, objectIdentifier: string, id:string): Promise<void> {
@@ -26,6 +35,50 @@ export abstract class ObjectRepository {
 
             throw e;
         }
+    }
+
+    protected async incrementAndGetNextSequenceId(ctx: Context, objectIdentifier: string): Promise<number> {
+        const { sequence: oldSequence } = await this.getObject<{ sequence: number }>(ctx, `${objectIdentifier}-seq`, 'seq') || { sequence: 0 }
+
+        await this.saveObject(ctx, `${objectIdentifier}-seq`, 'seq', { sequence: oldSequence + 1 })
+        return oldSequence + 1;
+    }
+
+    protected async *getAllObjectsIterator(ctx: Context, objectIdentifier: string): AsyncIterableIterator<{ key: string, value: unknown }> {
+        const startKey = `${objectIdentifier}:`
+        const endKey = `${objectIdentifier}:~`
+
+        const iterator = await ctx.stub.getStateByRange(startKey, endKey)
+
+        try {
+            // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+            while (true) {
+                const res = await iterator.next();
+
+                // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+                if (res.value && res.value.value.toString()) {
+                    const key = res.value.key;
+                    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+                    const value = JSON.parse(res.value && res.value.value.toString() || '{}') as unknown
+                    yield { key, value };
+                }
+
+                if (res.done) {
+                    break;
+                }
+            }
+        } finally {
+            await iterator.close();
+        }
+    }
+
+    protected async getAllObjects(ctx: Context, objectIdentifier: string): Promise<{ key: string, value: object }[]> {
+        const objects: { key: string, value: object }[] = []
+        for await (const { key, value } of this.getAllObjectsIterator(ctx, objectIdentifier)) {
+            objects.push({ key, value: value as object })
+        }
+
+        return objects
     }
 
     protected async changeObjectId(ctx: Context, objectIdentifier: string, oldId: string, newId: string): Promise<void> {

@@ -21,6 +21,7 @@
     "author": "Hyperledger",
     "license": "Apache-2.0",
     "dependencies": {
+        "dataclass": "^2.1.1",
         "fabric-contract-api": "~2.5",
         "fabric-shim": "~2.5",
         "json-stringify-deterministic": "^1.0.0",

@@ -1,26 +1,28 @@
-import { UserKycStatus } from '../enum/user-kyc-status.enum';
 
-import { Object, Property } from 'fabric-contract-api';
+import { UserRole } from '../enum/user-role.enum';
 
-@Object()
-export class User {
+import { KycApplicationStatus } from '../enum/kyc-application-statuc.enum';
+
+import { Data } from 'dataclass'
+
+export class User extends Data {
     static objectIdentifier = 'user';
 
-    @Property()
-    public username!: string;
+    public studentIdNumber!: string;
 
-    @Property()
+    public firstName!: string;
+
+    public lastName!: string;
+
     public passwordHash!: string;
 
-    @Property()
     public secretKeyHash!: string;
 
-    @Property()
-    public kycStatus!: UserKycStatus;
+    public kycStatus!: KycApplicationStatus;
 
-    @Property()
-    public createdAt!: Date;
+    public role!: UserRole;
 
-    @Property()
-    public updatedAt!: Date;
+    public createdAt!: number;
+
+    public updatedAt!: number;
 }

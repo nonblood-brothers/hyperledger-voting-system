@@ -7,7 +7,7 @@ export function getSubmitTransactionHandler(contract: Contract): RequestHandler 
     return async (req, res) => {
         const { method, args } = req.body as { method: string, args: string[] };
 
-        const actualArgs = req.protectedMethod ? [req.username ?? '', ...args] : args
+        const actualArgs = req.protectedMethod ? [req.studentIdNumber ?? '', ...args] : args
         const result = await submitTransactionAndGetResult(contract, method, ...actualArgs)
 
         res.set('Content-Type', 'application/json; charset=utf-8')
@@ -19,7 +19,7 @@ export function getEvaluateTransactionHandler(contract: Contract): RequestHandle
     return async (req, res) => {
         const { method, args } = req.body as { method: string, args: string[] };
 
-        const actualArgs = req.protectedMethod ? [req.username ?? '', ...args] : args
+        const actualArgs = req.protectedMethod ? [req.studentIdNumber ?? '', ...args] : args
         const result = await evaluateTransactionAndGetResult(contract, method, ...actualArgs)
 
         res.set('Content-Type', 'application/json; charset=utf-8')

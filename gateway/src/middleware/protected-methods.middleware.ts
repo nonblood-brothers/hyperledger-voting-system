@@ -12,6 +12,8 @@ export function getProtectedMethodsMiddleware(protectedMethods: string[]): Reque
 
         if (method && !protectedMethods.includes(method)) {
             req.skipAuth = true
+            next();
+            return;
         }
 
         req.protectedMethod = true;

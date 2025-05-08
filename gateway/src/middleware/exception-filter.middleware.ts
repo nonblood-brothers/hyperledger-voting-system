@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction, ErrorRequestHandler } from 'express'
 import { HttpException } from '@/exception/http.exception';
-import { EndorseError } from '@hyperledger/fabric-gateway';
+import { EndorseError, GatewayError } from '@hyperledger/fabric-gateway';
 
 export function getExceptionFilterMiddleware(): ErrorRequestHandler {
     return (err: HttpException | Error, req: Request, res: Response, next: NextFunction): void => {
@@ -11,7 +11,7 @@ export function getExceptionFilterMiddleware(): ErrorRequestHandler {
             return;
         }
 
-        if (err instanceof EndorseError) {
+        if (err instanceof EndorseError || err instanceof GatewayError) {
             res.status(400).send({ message: err.details[0]?.message.split(', ').slice(1).join(', ') })
             return;
         }

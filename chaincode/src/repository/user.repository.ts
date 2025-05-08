@@ -5,15 +5,21 @@ import { ObjectRepository } from './object.repository';
 import { Context } from 'fabric-contract-api';
 
 export class UserRepository extends ObjectRepository {
-    public async saveUser(ctx: Context, username: string, user: User): Promise<void> {
-        await this.saveObject(ctx, User.objectIdentifier, username, user)
+    public async createUser(ctx: Context, user: User): Promise<void> {
+        // eslint-disable-next-line @typescript-eslint/no-misused-spread
+        const newUser = User.create({ ...user, createdAt: ctx.stub.getTxTimestamp().seconds.toNumber(), updatedAt: ctx.stub.getTxTimestamp().seconds.toNumber() })
+        await this.saveObject(ctx, User.objectIdentifier, user.studentIdNumber, newUser)
     }
 
-    public async deleteUser(ctx: Context, username: string): Promise<void> {
-        await this.deleteObject(ctx, User.objectIdentifier, username)
+    public async updateUser(ctx: Context, studentIdNumber: string, user: Partial<User>): Promise<User | null> {
+        return await this.updateObject(ctx, User.objectIdentifier, studentIdNumber, user)
     }
 
-    public async getUser(ctx: Context, username: string): Promise<User | null> {
-        return this.getObject(ctx, User.objectIdentifier, username)
+    public async deleteUser(ctx: Context, studentIdNumber: string): Promise<void> {
+        await this.deleteObject(ctx, User.objectIdentifier, studentIdNumber)
+    }
+
+    public async getUser(ctx: Context, studentIdNumber: string): Promise<User | null> {
+        return this.getObject<User>(ctx, User.objectIdentifier, studentIdNumber)
     }
 }

@@ -1,21 +1,17 @@
 import { KycApplicationStatus } from '../enum/kyc-application-statuc.enum';
 
-import { Object, Property } from 'fabric-contract-api';
+import { Data } from 'dataclass';
 
-
-@Object()
-export class KYCApplication {
+export class KYCApplication extends Data {
     static objectIdentifier = 'kyc-application';
 
-    @Property()
+    public id!: string;
+
     public userId!: string;
 
-    @Property()
     public status!: KycApplicationStatus;
 
-    @Property()
-    public createdAt!: Date;
+    public createdAt!: number;
 
-    @Property()
-    public updatedAt!: Date;
+    public updatedAt!: number;
 }
