@@ -5,9 +5,17 @@ import { ObjectRepository } from './object.repository';
 import { Context } from 'fabric-contract-api';
 
 export class UserRepository extends ObjectRepository {
-    public async createUser(ctx: Context, user: User): Promise<void> {
-        // eslint-disable-next-line @typescript-eslint/no-misused-spread
-        const newUser = User.create({ ...user, createdAt: ctx.stub.getTxTimestamp().seconds.toNumber(), updatedAt: ctx.stub.getTxTimestamp().seconds.toNumber() })
+    public async createUser(ctx: Context, user: Omit<User, 'createdAt' | 'updatedAt'>): Promise<void> {
+        const currentTimestamp = ctx.stub.getTxTimestamp().seconds.toNumber()
+
+        const newUser = User.create(
+            Object.assign(
+                new User(),
+                user,
+                { createdAt: currentTimestamp, updatedAt: currentTimestamp }
+            )
+        )
+
         await this.saveObject(ctx, User.objectIdentifier, user.studentIdNumber, newUser)
     }
 

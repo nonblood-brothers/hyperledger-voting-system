@@ -1,7 +1,7 @@
 import { UserRole } from '../enum/user-role.enum';
 import { UserRepository } from '../repository/user.repository';
 
-import { KycApplicationStatus } from '../enum/kyc-application-statuc.enum';
+import { KycApplicationStatus } from '../enum/kyc-application-status.enum';
 
 import { Context } from 'fabric-contract-api';
 

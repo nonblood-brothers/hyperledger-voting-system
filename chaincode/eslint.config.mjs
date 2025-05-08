@@ -26,7 +26,7 @@ export default tseslint.config(js.configs.recommended, importPlugin.flatConfigs.
         'no-trailing-spaces': 'error',
         'quotes': ['error', 'single'],
         'import/order': ['error', {
-            'newlines-between': 'always-and-inside-groups',
+            'newlines-between': 'always',
             'distinctGroup': true,
             'groups': ['type', 'builtin', 'parent', 'sibling', 'index'],
         }],

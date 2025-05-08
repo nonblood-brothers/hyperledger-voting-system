@@ -1,4 +1,4 @@
-import { KycApplicationStatus } from '../enum/kyc-application-statuc.enum';
+import { KycApplicationStatus } from '../enum/kyc-application-status.enum';
 
 import { Data } from 'dataclass';
 

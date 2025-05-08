@@ -1,6 +1,6 @@
 import { KYCApplication } from '../object/kyc-application.object';
 
-import { KycApplicationStatus } from '../enum/kyc-application-statuc.enum';
+import { KycApplicationStatus } from '../enum/kyc-application-status.enum';
 
 import { ObjectRepository } from './object.repository';
 

@@ -1,5 +1,4 @@
 import { ObjectDoesNotExistException } from '../exception/object-does-not-exist.exception';
-
 import { ObjectAlreadyExistsException } from '../exception/object-already-exists.exception';
 
 import { Context } from 'fabric-contract-api';
