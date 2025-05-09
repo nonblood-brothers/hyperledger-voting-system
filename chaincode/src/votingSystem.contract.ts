@@ -8,6 +8,7 @@ import { UserRole } from './enum/user-role.enum';
 import { Poll } from './object/poll.object';
 import { PollStatus } from './enum/poll-status.enum';
 import { PollRepository } from './repository/poll.repository';
+import { PollQuestionRepository } from './repository/poll-question.repository';
 
 import { Context, Contract, Info, Returns, Transaction } from 'fabric-contract-api';
 
@@ -15,12 +16,14 @@ import { Context, Contract, Info, Returns, Transaction } from 'fabric-contract-a
 export class VotingSystemContract extends Contract {
     private userRepository: UserRepository;
     private pollRepository: PollRepository;
+    private pollQuestionRepository: PollQuestionRepository;
     private kycApplicationRepository: KycApplicationRepository;
 
     constructor() {
         super()
         this.userRepository = new UserRepository()
         this.pollRepository = new PollRepository()
+        this.pollQuestionRepository = new PollQuestionRepository()
         this.kycApplicationRepository = new KycApplicationRepository()
     }
 
@@ -83,6 +86,45 @@ export class VotingSystemContract extends Contract {
         )
 
         await this.pollRepository.createPoll(ctx, newPoll)
+    }
+
+    @Transaction()
+    @ProtectedMethod({ roles: [UserRole.STUDENT], kycVerification: true })
+    public async AddPollQuestion(ctx: Context, studentIdNumber: string, pollId: string, text: string): Promise<void> {
+        const poll = await this.pollRepository.getPollById(ctx, pollId)
+        if (!poll || poll.authorStudentIdNumber !== studentIdNumber) {
+            throw new Error(`Poll with id ${pollId} does not exist or you don't have access to it`)
+        }
+
+        if (![PollStatus.REVIEW, PollStatus.APPROVED_AND_WAITING, PollStatus.DECLINED].includes(poll.status)) {
+            throw new Error(`Poll is in status ${poll.status} and cannot be updated`)
+        }
+
+        const question = await this.pollQuestionRepository.createPollQuestion(ctx, pollId, text);
+
+        poll.questionIds.push(question.id)
+        poll.status = PollStatus.REVIEW;
+
+        await this.pollRepository.updatePoll(ctx, pollId, poll)
+    }
+
+    @Transaction()
+    @ProtectedMethod({ roles: [UserRole.STUDENT], kycVerification: true })
+    public async DeletePollQuestion(ctx: Context, studentIdNumber: string, pollId: string, questionId: string): Promise<void> {
+        const poll = await this.pollRepository.getPollById(ctx, pollId)
+        if (!poll || poll.authorStudentIdNumber !== studentIdNumber) {
+            throw new Error(`Poll with id ${pollId} does not exist or you don't have access to it`)
+        }
+
+        if (![PollStatus.REVIEW, PollStatus.APPROVED_AND_WAITING, PollStatus.DECLINED].includes(poll.status)) {
+            throw new Error(`Poll is in status ${poll.status} and cannot be updated`)
+        }
+
+        poll.questionIds = poll.questionIds.filter(id => id !== questionId)
+        poll.status = PollStatus.REVIEW
+
+        await this.pollQuestionRepository.deletePollQuestion(ctx, questionId)
+        await this.pollRepository.updatePoll(ctx, pollId, poll)
     }
 
     @Transaction(false)

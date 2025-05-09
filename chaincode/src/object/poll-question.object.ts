@@ -5,6 +5,8 @@ export class PollQuestion extends Data {
 
     public id!: string;
 
+    public pollId!: string;
+
     public text!: string;
 
     public voteCount!: number;

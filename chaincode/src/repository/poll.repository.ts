@@ -34,6 +34,8 @@ export class PollRepository extends ObjectRepository {
     }
 
     public async getPollById(ctx: Context, id: string): Promise<Poll | null> {
-        return await this.getObject<Poll>(ctx, Poll.objectIdentifier, id)
+        const result = await this.getObject<Poll>(ctx, Poll.objectIdentifier, id)
+
+        return result ? Poll.create(result) : null
     }
 }
