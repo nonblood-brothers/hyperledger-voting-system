@@ -25,4 +25,18 @@ export class PollQuestionRepository extends ObjectRepository {
     public async deletePollQuestion(ctx: Context, questionId: string): Promise<void> {
         await this.deleteObject(ctx, PollQuestion.objectIdentifier, questionId)
     }
+
+    public async incrementVoteCount(ctx: Context, questionId: string): Promise<PollQuestion | null> {
+        const pollQuestion = await this.getObject<PollQuestion>(ctx, PollQuestion.objectIdentifier, questionId)
+        if (!pollQuestion) return null
+
+        return await this.updateObject<PollQuestion>(ctx, PollQuestion.objectIdentifier, questionId, { 
+            voteCount: pollQuestion.voteCount + 1,
+            updatedAt: ctx.stub.getTxTimestamp().seconds.toNumber()
+        })
+    }
+
+    public async getPollQuestionById(ctx: Context, questionId: string): Promise<PollQuestion | null> {
+        return await this.getObject<PollQuestion>(ctx, PollQuestion.objectIdentifier, questionId)
+    }
 }

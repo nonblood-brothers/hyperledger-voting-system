@@ -19,11 +19,15 @@ export function ProtectedMethod(options?: ProtectedMethodOptions) {
         descriptor.value = async function(ctx: Context, studentIdNumber: string, ...args: unknown[]) {
             const user = await userRepository.getUser(ctx, studentIdNumber)
 
-            if (options?.roles?.length && !options.roles.includes(user?.role as UserRole)) {
+            if (!user) {
+                throw new Error(`User with student ID ${studentIdNumber} does not exist`)
+            }
+
+            if (options?.roles?.length && !options.roles.includes(user.role as UserRole)) {
                 throw new Error('Forbidden by role')
             }
 
-            if (options?.kycVerification && user?.kycStatus !== KycApplicationStatus.APPROVED) {
+            if (options?.kycVerification && user.kycStatus !== KycApplicationStatus.APPROVED) {
                 throw new Error('Forbidden by KYC status')
             }
 

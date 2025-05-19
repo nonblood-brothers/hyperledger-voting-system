@@ -23,10 +23,14 @@ export abstract class ObjectRepository {
     }
 
     protected async getObject<T>(ctx: Context, objectIdentifier: string, id: string): Promise<T | null> {
-        const data = await ctx.stub.getState(`${objectIdentifier}:${id}`).then(data => data.toString())
+        const data = await ctx.stub.getState(`${objectIdentifier}:${id}`)
+
+        if (!data || data.length === 0) {
+            return null
+        }
 
         try {
-            return JSON.parse(data) as T
+            return JSON.parse(data.toString()) as T
         } catch (e) {
             if (e instanceof SyntaxError) {
                 return null
@@ -50,21 +54,20 @@ export abstract class ObjectRepository {
         const iterator = await ctx.stub.getStateByRange(startKey, endKey)
 
         try {
-            // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-            while (true) {
-                const res = await iterator.next();
+            let result = await iterator.next();
 
-                // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-                if (res.value && res.value.value.toString()) {
-                    const key = res.value.key;
-                    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-                    const value = JSON.parse(res.value && res.value.value.toString() || '{}') as unknown
-                    yield { key, value };
+            while (!result.done) {
+                if (result.value && result.value.value && result.value.value.length > 0) {
+                    const key = result.value.key;
+                    try {
+                        const value = JSON.parse(result.value.value.toString()) as unknown;
+                        yield { key, value };
+                    } catch (e) {
+                        console.log(`Error parsing value for key ${key}: ${e}`);
+                    }
                 }
 
-                if (res.done) {
-                    break;
-                }
+                result = await iterator.next();
             }
         } finally {
             await iterator.close();

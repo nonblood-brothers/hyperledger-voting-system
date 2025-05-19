@@ -79,8 +79,8 @@ export class VotingSystemContract extends Contract {
                 title,
                 description,
                 authorStudentIdNumber: studentIdNumber,
-                plannedStartDate: plannedStartDate === 'null' ? null : Number(plannedStartDate),
-                plannedEndDate: plannedStartDate === 'null' ? null : Number(plannedEndDate),
+                plannedStartDate: !plannedStartDate || plannedStartDate === 'null' ? null : Number(plannedStartDate),
+                plannedEndDate: !plannedEndDate || plannedEndDate === 'null' ? null : Number(plannedEndDate),
                 status: PollStatus.REVIEW
             }
         )
@@ -103,7 +103,10 @@ export class VotingSystemContract extends Contract {
         const question = await this.pollQuestionRepository.createPollQuestion(ctx, pollId, text);
 
         poll.questionIds.push(question.id)
-        poll.status = PollStatus.REVIEW;
+
+        if ([PollStatus.APPROVED_AND_WAITING, PollStatus.DECLINED].includes(poll.status)) {
+            poll.status = PollStatus.REVIEW;
+        }
 
         await this.pollRepository.updatePoll(ctx, pollId, poll)
     }
@@ -203,7 +206,7 @@ export class VotingSystemContract extends Contract {
     public async StartPoll(ctx: Context, studentIdNumber: string, pollId: string): Promise<void> {
         const poll = await this.pollRepository.getPollById(ctx, pollId)
         if (!poll) {
-            throw new Error('Poll with id ${pollId} does not exist')
+            throw new Error(`Poll with id ${pollId} does not exist`)
         }
 
         if (poll.authorStudentIdNumber !== studentIdNumber) {
@@ -211,9 +214,9 @@ export class VotingSystemContract extends Contract {
         }
 
         if (poll.status !== PollStatus.APPROVED_AND_WAITING ||
-            ctx.stub.getTxTimestamp().seconds.toNumber() > (poll.plannedStartDate ?? Infinity)
+            (poll.plannedStartDate !== null && ctx.stub.getTxTimestamp().seconds.toNumber() < poll.plannedStartDate)
         ) {
-            throw new Error(`You can't start a poll that is not in ${PollStatus.APPROVED_AND_WAITING} status or has already been started by planned date`)
+            throw new Error(`You can't start a poll that is not in ${PollStatus.APPROVED_AND_WAITING} status or hasn't reached its planned start date yet`)
         }
 
         await this.pollRepository.updatePoll(ctx, pollId, { status: PollStatus.ACTIVE })
@@ -224,17 +227,17 @@ export class VotingSystemContract extends Contract {
     public async StopPoll(ctx: Context, studentIdNumber: string, pollId: string): Promise<void> {
         const poll = await this.pollRepository.getPollById(ctx, pollId)
         if (!poll) {
-            throw new Error('Poll with id ${pollId} does not exist')
+            throw new Error(`Poll with id ${pollId} does not exist`)
         }
 
         if (poll.authorStudentIdNumber !== studentIdNumber) {
-            throw new Error(`You can't start poll with id ${pollId} as it was not created by you`)
+            throw new Error(`You can't stop poll with id ${pollId} as it was not created by you`)
         }
 
         if (poll.status !== PollStatus.ACTIVE ||
-            ctx.stub.getTxTimestamp().seconds.toNumber() < (poll.plannedEndDate ?? Infinity)
+            (poll.plannedEndDate !== null && ctx.stub.getTxTimestamp().seconds.toNumber() > poll.plannedEndDate)
         ) {
-            throw new Error(`You can't stop a poll that is not in ${PollStatus.ACTIVE} status or has already been started by planned date`)
+            throw new Error(`You can't stop a poll that is not in ${PollStatus.ACTIVE} status or has already ended by planned date`)
         }
 
         await this.pollRepository.updatePoll(ctx, pollId, { status: PollStatus.FINISHED })
@@ -257,5 +260,38 @@ export class VotingSystemContract extends Contract {
     @Returns('string')
     public IsAuthenticated(ctx: Context, studentIdNumber: string): string {
         return JSON.stringify({ authenticated: true, studentIdNumber })
+    }
+
+    @Transaction()
+    @ProtectedMethod({ roles: [UserRole.STUDENT], kycVerification: true })
+    public async GiveVote(ctx: Context, studentIdNumber: string, pollId: string, questionId: string): Promise<void> {
+        const poll = await this.pollRepository.getPollById(ctx, pollId)
+        if (!poll) {
+            throw new Error(`Poll with id ${pollId} does not exist`)
+        }
+
+        if (poll.status !== PollStatus.ACTIVE) {
+            throw new Error(`Poll with id ${pollId} is not active`)
+        }
+
+        if (poll.participantIds.includes(studentIdNumber)) {
+            throw new Error(`User with student ID ${studentIdNumber} has already voted in poll with id ${pollId}`)
+        }
+
+        const pollQuestion = await this.pollQuestionRepository.getPollQuestionById(ctx, questionId)
+
+        if (!pollQuestion) {
+            throw new Error(`Question with id ${questionId} does not exist`)
+        }
+
+        if (pollQuestion.pollId !== pollId) {
+            throw new Error(`Question with id ${questionId} does not belong to poll with id ${pollId}`)
+        }
+
+        await this.pollQuestionRepository.incrementVoteCount(ctx, questionId)
+
+        await this.pollRepository.updatePoll(ctx, pollId, {
+            participantIds: [...poll.participantIds, studentIdNumber]
+        })
     }
 }
