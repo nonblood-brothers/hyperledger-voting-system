@@ -294,4 +294,52 @@ export class VotingSystemContract extends Contract {
             participantIds: [...poll.participantIds, studentIdNumber]
         })
     }
+
+    @Transaction(false)
+    @Returns('string')
+    @ProtectedMethod({ roles: [UserRole.STUDENT, UserRole.ADMIN], kycVerification: true })
+    public async GetPollById(ctx: Context, studentIdNumber: string, pollId: string): Promise<string> {
+        const poll = await this.pollRepository.getPollById(ctx, pollId)
+        if (!poll) {
+            throw new Error(`Poll with id ${pollId} does not exist`)
+        }
+
+        return JSON.stringify(poll)
+    }
+
+    @Transaction(false)
+    @Returns('string')
+    @ProtectedMethod({ roles: [UserRole.STUDENT, UserRole.ADMIN], kycVerification: true })
+    public async GetPollQuestionsByPollId(ctx: Context, studentIdNumber: string, pollId: string): Promise<string> {
+        const poll = await this.pollRepository.getPollById(ctx, pollId)
+        if (!poll) {
+            throw new Error(`Poll with id ${pollId} does not exist`)
+        }
+
+        const questions = []
+        for (const questionId of poll.questionIds) {
+            const question = await this.pollQuestionRepository.getPollQuestionById(ctx, questionId)
+            if (question) {
+                questions.push(question)
+            }
+        }
+
+        return JSON.stringify(questions)
+    }
+
+    @Transaction(false)
+    @Returns('string')
+    @ProtectedMethod({ roles: [UserRole.STUDENT, UserRole.ADMIN], kycVerification: true })
+    public async GetActivePolls(ctx: Context, studentIdNumber: string): Promise<string> {
+        const polls = await this.pollRepository.getPollsByStatus(ctx, PollStatus.ACTIVE)
+        return JSON.stringify(polls)
+    }
+
+    @Transaction(false)
+    @Returns('string')
+    @ProtectedMethod({ roles: [UserRole.STUDENT, UserRole.ADMIN], kycVerification: true })
+    public async GetFinishedPolls(ctx: Context, studentIdNumber: string): Promise<string> {
+        const polls = await this.pollRepository.getPollsByStatus(ctx, PollStatus.FINISHED)
+        return JSON.stringify(polls)
+    }
 }

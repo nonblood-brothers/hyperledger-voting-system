@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Container, Row, Col, Card, Table, Button, Badge, Alert } from 'react-bootstrap';
 import { useAuth } from '../../context/AuthContext';
-import { userApi } from '../../services/api.service';
+import { userApi } from '../../services/user.service';
 import { KycApplicationStatus } from '../../types';
 
 interface KycApplication {
@@ -46,10 +46,10 @@ const KycReview: React.FC = () => {
     try {
       await userApi.updateKycApplicationStatus(id, status);
       setSuccessMessage(`KYC application ${status === KycApplicationStatus.APPROVED ? 'approved' : 'rejected'} successfully.`);
-      
+
       // Remove the application from the list
       setApplications(applications.filter(app => app.id !== id));
-      
+
       // Clear success message after 3 seconds
       setTimeout(() => {
         setSuccessMessage('');
@@ -75,7 +75,7 @@ const KycReview: React.FC = () => {
       <h2>KYC Applications Review</h2>
       {error && <Alert variant="danger">{error}</Alert>}
       {successMessage && <Alert variant="success">{successMessage}</Alert>}
-      
+
       <Card className="mt-3">
         <Card.Header>
           <Row className="align-items-center">

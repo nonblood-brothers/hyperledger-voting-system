@@ -12,6 +12,8 @@ import KycReview from './pages/admin/KycReview';
 import PollReview from './pages/admin/PollReview';
 import PollList from './pages/PollList';
 import CreatePoll from './pages/CreatePoll';
+import PollDetail from './pages/PollDetail';
+import PollQuestions from './pages/PollQuestions';
 import 'bootstrap/dist/css/bootstrap.min.css';
 
 const App: React.FC = () => {
@@ -42,6 +44,8 @@ const App: React.FC = () => {
             <Route element={<ProtectedRoute requireAuth={true} requireKyc={true} />}>
               <Route path="/polls" element={<PollList />} />
               <Route path="/polls/create" element={<CreatePoll />} />
+              <Route path="/polls/:id" element={<PollDetail />} />
+              <Route path="/polls/:id/questions" element={<PollQuestions />} />
               {/* Add more student routes here */}
             </Route>
 

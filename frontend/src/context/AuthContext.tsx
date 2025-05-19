@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { User, TokenPayload, KycApplicationStatus, UserRole } from '../types';
-import { authApi } from '../services/api.service';
+import { authApi } from '../services/auth.service';
 import { decodeToken } from '../utils/jwt.utils';
 
 interface AuthContextType {

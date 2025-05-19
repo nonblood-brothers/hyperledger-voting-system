@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Container, Row, Col, Card, Table, Button, Badge, Alert } from 'react-bootstrap';
 import { useAuth } from '../../context/AuthContext';
-import { pollApi } from '../../services/api.service';
+import { pollApi } from '../../services/poll.service';
 import { Poll, PollStatus } from '../../types';
 
 const PollReview: React.FC = () => {
@@ -24,38 +24,7 @@ const PollReview: React.FC = () => {
     } catch (err) {
       console.error('Error fetching polls:', err);
       setError('Failed to load polls. Please try again.');
-      
-      // Mock data for demonstration
-      const mockPolls: Poll[] = [
-        {
-          id: '4',
-          title: 'Library Hours Extension',
-          description: 'Should the library extend its opening hours during exam period?',
-          authorStudentIdNumber: 'student4',
-          questionIds: ['q10', 'q11'],
-          participantIds: [],
-          plannedStartDate: Date.now() + 86400000, // 1 day later
-          plannedEndDate: Date.now() + 604800000, // 7 days later
-          status: PollStatus.REVIEW,
-          createdAt: Date.now() - 86400000, // 1 day ago
-          updatedAt: Date.now() - 86400000,
-        },
-        {
-          id: '5',
-          title: 'Campus Wi-Fi Improvement',
-          description: 'Vote on which areas of the campus need Wi-Fi improvement',
-          authorStudentIdNumber: 'student5',
-          questionIds: ['q12', 'q13', 'q14'],
-          participantIds: [],
-          plannedStartDate: null,
-          plannedEndDate: null,
-          status: PollStatus.REVIEW,
-          createdAt: Date.now() - 172800000, // 2 days ago
-          updatedAt: Date.now() - 172800000,
-        },
-      ];
-      
-      setPolls(mockPolls);
+      setPolls([]);
     } finally {
       setLoading(false);
     }
@@ -65,10 +34,10 @@ const PollReview: React.FC = () => {
     try {
       await pollApi.updatePollReviewStatus(pollId, status);
       setSuccessMessage(`Poll ${status === PollStatus.APPROVED_AND_WAITING ? 'approved' : 'rejected'} successfully.`);
-      
+
       // Remove the poll from the list
       setPolls(polls.filter(poll => poll.id !== pollId));
-      
+
       // Clear success message after 3 seconds
       setTimeout(() => {
         setSuccessMessage('');
@@ -94,7 +63,7 @@ const PollReview: React.FC = () => {
       <h2>Poll Review</h2>
       {error && <Alert variant="danger">{error}</Alert>}
       {successMessage && <Alert variant="success">{successMessage}</Alert>}
-      
+
       <Card className="mt-3">
         <Card.Header>
           <Row className="align-items-center">

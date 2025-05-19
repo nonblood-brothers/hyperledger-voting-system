@@ -2,12 +2,12 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Container, Form, Button, Card, Alert, Row, Col } from 'react-bootstrap';
 import { useAuth } from '../context/AuthContext';
-import { pollApi } from '../services/api.service';
+import { pollApi } from '../services/poll.service';
 
 const CreatePoll: React.FC = () => {
   const { isKycVerified } = useAuth();
   const navigate = useNavigate();
-  
+
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [plannedStartDate, setPlannedStartDate] = useState('');
@@ -26,20 +26,20 @@ const CreatePoll: React.FC = () => {
 
     try {
       setLoading(true);
-      
+
       // Convert dates to timestamps or null
       const startTimestamp = plannedStartDate ? new Date(plannedStartDate).getTime() : null;
       const endTimestamp = plannedEndDate ? new Date(plannedEndDate).getTime() : null;
-      
+
       // Validate dates
       if (startTimestamp && endTimestamp && startTimestamp >= endTimestamp) {
         setError('End date must be after start date');
         setLoading(false);
         return;
       }
-      
+
       await pollApi.createPoll(title, description, startTimestamp, endTimestamp);
-      
+
       // Redirect to a page where the user can add questions to the poll
       navigate('/polls', { state: { message: 'Poll created successfully! It will be reviewed by an administrator.' } });
     } catch (err) {
@@ -70,7 +70,7 @@ const CreatePoll: React.FC = () => {
             </Card.Header>
             <Card.Body>
               {error && <Alert variant="danger">{error}</Alert>}
-              
+
               <Form onSubmit={handleSubmit}>
                 <Form.Group className="mb-3" controlId="pollTitle">
                   <Form.Label>Poll Title</Form.Label>

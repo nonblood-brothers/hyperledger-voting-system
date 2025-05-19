@@ -1,16 +1,21 @@
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Container, Row, Col, Card, Badge, Button, Alert } from 'react-bootstrap';
 import { useAuth } from '../context/AuthContext';
-import { pollApi } from '../services/api.service';
+import { pollApi } from '../services/poll.service';
 import { Poll, PollStatus } from '../types';
 
 const PollList: React.FC = () => {
   const { isAdmin, isKycVerified } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
   const [activePolls, setActivePolls] = useState<Poll[]>([]);
   const [finishedPolls, setFinishedPolls] = useState<Poll[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [successMessage, setSuccessMessage] = useState<string | null>(
+    location.state?.message ? location.state.message : null
+  );
 
   useEffect(() => {
     fetchPolls();
@@ -19,59 +24,12 @@ const PollList: React.FC = () => {
   const fetchPolls = async () => {
     try {
       setLoading(true);
-      // These endpoints don't exist yet, so we'll use mock data for now
-      // In a real implementation, we would call the API
-      // const activeResult = await pollApi.getActivePolls();
-      // const finishedResult = await pollApi.getFinishedPolls();
+      // Use the real API endpoints
+      const activePolls = await pollApi.getActivePolls();
+      const finishedPolls = await pollApi.getFinishedPolls();
 
-      // Mock data for demonstration
-      const mockActivePolls: Poll[] = [
-        {
-          id: '1',
-          title: 'Student Council Election',
-          description: 'Vote for the next student council president',
-          authorStudentIdNumber: 'student1',
-          questionIds: ['q1', 'q2', 'q3'],
-          participantIds: [],
-          plannedStartDate: Date.now(),
-          plannedEndDate: Date.now() + 86400000, // 1 day later
-          status: PollStatus.ACTIVE,
-          createdAt: Date.now() - 86400000, // 1 day ago
-          updatedAt: Date.now() - 86400000,
-        },
-        {
-          id: '2',
-          title: 'Campus Improvement Survey',
-          description: 'Help us decide which campus facilities to improve next',
-          authorStudentIdNumber: 'student2',
-          questionIds: ['q4', 'q5'],
-          participantIds: [],
-          plannedStartDate: Date.now() - 172800000, // 2 days ago
-          plannedEndDate: Date.now() + 172800000, // 2 days later
-          status: PollStatus.ACTIVE,
-          createdAt: Date.now() - 259200000, // 3 days ago
-          updatedAt: Date.now() - 259200000,
-        },
-      ];
-
-      const mockFinishedPolls: Poll[] = [
-        {
-          id: '3',
-          title: 'Cafeteria Menu Voting',
-          description: 'Vote for your favorite dishes to be included in the cafeteria menu',
-          authorStudentIdNumber: 'student3',
-          questionIds: ['q6', 'q7', 'q8', 'q9'],
-          participantIds: ['student1', 'student2'],
-          plannedStartDate: Date.now() - 604800000, // 7 days ago
-          plannedEndDate: Date.now() - 86400000, // 1 day ago
-          status: PollStatus.FINISHED,
-          createdAt: Date.now() - 691200000, // 8 days ago
-          updatedAt: Date.now() - 86400000,
-        },
-      ];
-
-      setActivePolls(mockActivePolls);
-      setFinishedPolls(mockFinishedPolls);
+      setActivePolls(activePolls);
+      setFinishedPolls(finishedPolls);
       setError('');
     } catch (err) {
       console.error('Error fetching polls:', err);
@@ -104,7 +62,7 @@ const PollList: React.FC = () => {
             <div className="d-grid gap-2">
               <Button 
                 variant={isActive ? 'primary' : 'outline-secondary'} 
-                onClick={() => window.location.href = `/polls/${poll.id}`}
+                onClick={() => navigate(`/polls/${poll.id}`)}
               >
                 {isActive ? 'Vote Now' : 'View Results'}
               </Button>
@@ -133,13 +91,14 @@ const PollList: React.FC = () => {
       <div className="d-flex justify-content-between align-items-center mb-4">
         <h2>Polls</h2>
         {isKycVerified && (
-          <Button variant="success" onClick={() => window.location.href = "/polls/create"}>
+          <Button variant="success" onClick={() => navigate("/polls/create")}>
             Create New Poll
           </Button>
         )}
       </div>
 
       {error && <Alert variant="danger">{error}</Alert>}
+      {successMessage && <Alert variant="success" onClose={() => setSuccessMessage(null)} dismissible>{successMessage}</Alert>}
 
       {loading ? (
         <div className="text-center py-5">Loading polls...</div>
