@@ -167,4 +167,48 @@ describe('VotingSystemContract', () => {
             );
         });
     });
+
+    describe('GetExistingUser', () => {
+        const testStudentIdNumber = '12345';
+
+        it('should successfully retrieve an existing user', async () => {
+            // Setup: Create a mock user
+            const mockUser = User.create({
+                firstName: 'John',
+                lastName: 'Doe',
+                studentIdNumber: testStudentIdNumber,
+                passwordHash: 'hashedPassword',
+                secretKeyHash: 'hashedSecretKey',
+                kycStatus: KycApplicationStatus.APPROVED,
+                role: UserRole.STUDENT,
+                createdAt: 1234567890,
+                updatedAt: 1234567890
+            });
+
+            // Mock the repository to return the user
+            mockUserRepository.getUser.mockResolvedValue(mockUser);
+
+            // Execute
+            const result = await contract.GetExistingUser(mockContext, testStudentIdNumber);
+
+            // Verify
+            // eslint-disable-next-line @typescript-eslint/unbound-method
+            expect(mockUserRepository.getUser).toHaveBeenCalledWith(mockContext, testStudentIdNumber);
+            expect(result).toBe(JSON.stringify(mockUser));
+        });
+
+        it('should throw an error if user does not exist', async () => {
+            // Setup: User does not exist
+            mockUserRepository.getUser.mockResolvedValue(null);
+
+            // Execute & Verify
+            await expect(
+                contract.GetExistingUser(mockContext, testStudentIdNumber)
+            ).rejects.toThrow(`User with student id ${testStudentIdNumber} does not exist`);
+
+            // Verify getUser was called
+            // eslint-disable-next-line @typescript-eslint/unbound-method
+            expect(mockUserRepository.getUser).toHaveBeenCalledWith(mockContext, testStudentIdNumber);
+        });
+    });
 });
