@@ -6,12 +6,13 @@ import { ObjectRepository } from './object.repository';
 import { Context } from 'fabric-contract-api';
 
 export class PollRepository extends ObjectRepository {
-    public async createPoll(ctx: Context, poll: Omit<Poll, 'createdAt' | 'updatedAt'>): Promise<void> {
+    public async createPoll(ctx: Context, poll: Omit<Poll, 'id' | 'createdAt' | 'updatedAt'>): Promise<void> {
         const currentTimestamp = ctx.stub.getTxTimestamp().seconds.toNumber()
+        const id = await this.incrementAndGetNextSequenceId(ctx, Poll.objectIdentifier)
 
-        await this.saveObject(ctx, Poll.objectIdentifier, poll.id,
+        await this.saveObject(ctx, Poll.objectIdentifier, id.toString(),
             Poll.create(
-                Object.assign(new Poll(), poll, { createdAt: currentTimestamp, updatedAt: currentTimestamp })
+                Object.assign({ ...poll }, { id: id.toString(), createdAt: currentTimestamp, updatedAt: currentTimestamp })
             )
         )
     }
@@ -23,6 +24,21 @@ export class PollRepository extends ObjectRepository {
         for await (const iteratorElement of iterator) {
             if ((iteratorElement.value as Poll | undefined)?.status === status) {
                 result.push(iteratorElement.value as Poll)
+            }
+        }
+
+        return result
+    }
+
+    public async getPollsByCreatorAndStatus(ctx: Context, creatorId: string, status: PollStatus | PollStatus[]): Promise<Poll[]> {
+        const iterator = this.getAllObjectsIterator(ctx, Poll.objectIdentifier)
+        const result: Poll[] = []
+        const statuses = Array.isArray(status) ? status : [status];
+
+        for await (const iteratorElement of iterator) {
+            const poll = iteratorElement.value as Poll | undefined;
+            if (poll && statuses.includes(poll.status) && poll.authorStudentIdNumber === creatorId) {
+                result.push(poll)
             }
         }
 

@@ -33,5 +33,7 @@ export default tseslint.config(js.configs.recommended, importPlugin.flatConfigs.
         'object-curly-spacing': ['error', 'always'],
         'import/no-named-as-default-member': 'off',
         'keyword-spacing': ['error'],
+        'no-unused-vars': 'off',
+        '@typescript-eslint/no-unused-vars': 'off',
     }
 });

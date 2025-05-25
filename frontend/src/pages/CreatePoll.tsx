@@ -1,12 +1,18 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { Container, Form, Button, Card, Alert, Row, Col } from 'react-bootstrap';
 import { useAuth } from '../context/AuthContext';
 import { pollApi } from '../services/poll.service';
+import { Poll } from '../types';
 
-const CreatePoll: React.FC = () => {
+interface CreatePollProps {
+  isEditMode?: boolean;
+}
+
+const CreatePoll: React.FC<CreatePollProps> = ({ isEditMode = false }) => {
   const { isKycVerified } = useAuth();
   const navigate = useNavigate();
+  const { id } = useParams<{ id: string }>();
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -14,6 +20,45 @@ const CreatePoll: React.FC = () => {
   const [plannedEndDate, setPlannedEndDate] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [fetchingPoll, setFetchingPoll] = useState(isEditMode);
+  const [poll, setPoll] = useState<Poll | null>(null);
+
+  // Fetch poll data when in edit mode
+  useEffect(() => {
+    if (isEditMode && id) {
+      const fetchPollData = async () => {
+        try {
+          setFetchingPoll(true);
+          const pollData = await pollApi.getPollById(id);
+          setPoll(pollData);
+
+          // Populate form fields with existing data
+          setTitle(pollData.title);
+          setDescription(pollData.description);
+
+          if (pollData.plannedStartDate) {
+            const startDate = new Date(pollData.plannedStartDate * 1000);
+            setPlannedStartDate(startDate.toISOString().slice(0, 16));
+          }
+
+          if (pollData.plannedEndDate) {
+            const endDate = new Date(pollData.plannedEndDate * 1000);
+            setPlannedEndDate(endDate.toISOString().slice(0, 16));
+          }
+
+          setError('');
+        } catch (err) {
+          console.error('Error fetching poll data:', err);
+          setError('Failed to load poll data. Please try again.');
+          navigate('/polls');
+        } finally {
+          setFetchingPoll(false);
+        }
+      };
+
+      fetchPollData();
+    }
+  }, [isEditMode, id, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,8 +73,8 @@ const CreatePoll: React.FC = () => {
       setLoading(true);
 
       // Convert dates to timestamps or null
-      const startTimestamp = plannedStartDate ? new Date(plannedStartDate).getTime() : null;
-      const endTimestamp = plannedEndDate ? new Date(plannedEndDate).getTime() : null;
+      const startTimestamp = plannedStartDate ? new Date(plannedStartDate).getTime() / 1000 : null;
+      const endTimestamp = plannedEndDate ? new Date(plannedEndDate).getTime() / 1000 : null;
 
       // Validate dates
       if (startTimestamp && endTimestamp && startTimestamp >= endTimestamp) {
@@ -38,13 +83,18 @@ const CreatePoll: React.FC = () => {
         return;
       }
 
-      await pollApi.createPoll(title, description, startTimestamp, endTimestamp);
-
-      // Redirect to a page where the user can add questions to the poll
-      navigate('/polls', { state: { message: 'Poll created successfully! It will be reviewed by an administrator.' } });
+      if (isEditMode && id) {
+        // Update existing poll
+        await pollApi.updatePoll(id, startTimestamp, endTimestamp, title, description);
+        navigate('/polls', { state: { message: 'Poll updated successfully! It will be reviewed by an administrator.' } });
+      } else {
+        // Create new poll
+        await pollApi.createPoll(title, description, startTimestamp, endTimestamp);
+        navigate('/polls', { state: { message: 'Poll created successfully! It will be reviewed by an administrator.' } });
+      }
     } catch (err) {
-      console.error('Error creating poll:', err);
-      setError('Failed to create poll. Please try again.');
+      console.error(`Error ${isEditMode ? 'updating' : 'creating'} poll:`, err);
+      setError(`Failed to ${isEditMode ? 'update' : 'create'} poll. Please try again.`);
     } finally {
       setLoading(false);
     }
@@ -66,10 +116,11 @@ const CreatePoll: React.FC = () => {
         <Col md={8}>
           <Card>
             <Card.Header as="h4" className="text-center">
-              Create New Poll
+              {isEditMode ? 'Edit Poll' : 'Create New Poll'}
             </Card.Header>
             <Card.Body>
               {error && <Alert variant="danger">{error}</Alert>}
+              {fetchingPoll && <Alert variant="info">Loading poll data...</Alert>}
 
               <Form onSubmit={handleSubmit}>
                 <Form.Group className="mb-3" controlId="pollTitle">
@@ -125,12 +176,16 @@ const CreatePoll: React.FC = () => {
                 </Row>
 
                 <Alert variant="info">
-                  After creating the poll, you'll be able to add voting options. The poll will be submitted for review by an administrator before it becomes active.
+                  {isEditMode 
+                    ? 'Your changes will be submitted for review by an administrator before the poll becomes active again.'
+                    : 'After creating the poll, you\'ll be able to add voting options. The poll will be submitted for review by an administrator before it becomes active.'}
                 </Alert>
 
                 <div className="d-grid gap-2 mt-4">
-                  <Button variant="primary" type="submit" disabled={loading}>
-                    {loading ? 'Creating...' : 'Create Poll'}
+                  <Button variant="primary" type="submit" disabled={loading || fetchingPoll}>
+                    {loading 
+                      ? (isEditMode ? 'Updating...' : 'Creating...') 
+                      : (isEditMode ? 'Update Poll' : 'Create Poll')}
                   </Button>
                   <Button variant="outline-secondary" onClick={() => navigate('/polls')}>
                     Cancel

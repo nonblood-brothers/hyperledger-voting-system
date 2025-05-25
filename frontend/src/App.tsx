@@ -13,7 +13,7 @@ import PollReview from './pages/admin/PollReview';
 import PollList from './pages/PollList';
 import CreatePoll from './pages/CreatePoll';
 import PollDetail from './pages/PollDetail';
-import PollQuestions from './pages/PollQuestions';
+import PollOptions from './pages/PollOptions';
 import 'bootstrap/dist/css/bootstrap.min.css';
 
 const App: React.FC = () => {
@@ -40,18 +40,25 @@ const App: React.FC = () => {
               {/* Add more admin routes here */}
             </Route>
 
+            {/* Poll viewing routes (accessible to all users) */}
+            <Route path="/polls" element={<PollList />} />
+            <Route path="/polls/:id" element={<PollDetail />} />
+
             {/* Student routes (require KYC verification) */}
             <Route element={<ProtectedRoute requireAuth={true} requireKyc={true} />}>
-              <Route path="/polls" element={<PollList />} />
-              <Route path="/polls/create" element={<CreatePoll />} />
-              <Route path="/polls/:id" element={<PollDetail />} />
-              <Route path="/polls/:id/questions" element={<PollQuestions />} />
               {/* Add more student routes here */}
             </Route>
 
+            {/* Student-only routes (not accessible to admins) */}
+            <Route element={<ProtectedRoute requireAuth={true} requireKyc={true} requireStudent={true} />}>
+              <Route path="/polls/create" element={<CreatePoll />} />
+              <Route path="/polls/:id/edit" element={<CreatePoll isEditMode={true} />} />
+              <Route path="/polls/:id/options" element={<PollOptions />} />
+            </Route>
+
             {/* Default route */}
-            <Route path="/" element={<Navigate to="/login" replace />} />
-            <Route path="*" element={<Navigate to="/login" replace />} />
+            <Route path="/" element={<Navigate to="/polls" replace />} />
+            <Route path="*" element={<Navigate to="/polls" replace />} />
           </Routes>
         </Container>
       </AuthProvider>

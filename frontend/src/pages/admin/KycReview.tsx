@@ -117,7 +117,7 @@ const KycReview: React.FC = () => {
                     <td>
                       {app.user ? `${app.user.firstName} ${app.user.lastName}` : app.userId}
                     </td>
-                    <td>{new Date(app.createdAt).toLocaleString()}</td>
+                    <td>{new Date(app.createdAt * 1000).toLocaleString()}</td>
                     <td>
                       <Badge bg={
                         app.status === KycApplicationStatus.PENDING ? 'warning' :

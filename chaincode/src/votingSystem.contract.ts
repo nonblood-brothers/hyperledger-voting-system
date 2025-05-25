@@ -8,7 +8,7 @@ import { UserRole } from './enum/user-role.enum';
 import { Poll } from './object/poll.object';
 import { PollStatus } from './enum/poll-status.enum';
 import { PollRepository } from './repository/poll.repository';
-import { PollQuestionRepository } from './repository/poll-question.repository';
+import { PollOptionRepository } from './repository/poll-option.repository';
 
 import { Context, Contract, Info, Returns, Transaction } from 'fabric-contract-api';
 
@@ -16,15 +16,50 @@ import { Context, Contract, Info, Returns, Transaction } from 'fabric-contract-a
 export class VotingSystemContract extends Contract {
     private userRepository: UserRepository;
     private pollRepository: PollRepository;
-    private pollQuestionRepository: PollQuestionRepository;
+    private pollOptionRepository: PollOptionRepository;
     private kycApplicationRepository: KycApplicationRepository;
 
     constructor() {
         super()
         this.userRepository = new UserRepository()
         this.pollRepository = new PollRepository()
-        this.pollQuestionRepository = new PollQuestionRepository()
+        this.pollOptionRepository = new PollOptionRepository()
         this.kycApplicationRepository = new KycApplicationRepository()
+    }
+
+    /**
+     * Helper function to check and update poll status based on dates
+     * @param ctx The transaction context
+     * @param poll The poll to check
+     * @returns The poll with updated status if needed, or the original poll if no update needed
+     */
+    private async checkAndUpdatePollStatus(ctx: Context, poll: Poll): Promise<Poll> {
+        const currentTime = ctx.stub.getTxTimestamp().seconds.toNumber();
+        let statusChanged = false;
+
+        // Check if an APPROVED_AND_WAITING poll should be ACTIVE based on the plannedStartDate
+        if (poll.status === PollStatus.APPROVED_AND_WAITING &&
+            poll.plannedStartDate !== null &&
+            currentTime >= poll.plannedStartDate)
+        {
+            poll = poll.copy({ status: PollStatus.ACTIVE });
+            statusChanged = true;
+        }
+
+        // Check if an ACTIVE poll should be FINISHED based on plannedEndDate
+        if (poll.status === PollStatus.ACTIVE &&
+            poll.plannedEndDate !== null &&
+            currentTime >= poll.plannedEndDate) {
+            poll = poll.copy({ status: PollStatus.FINISHED });
+            statusChanged = true;
+        }
+
+        // Update the poll in the repository if status changed
+        if (statusChanged) {
+            await this.pollRepository.updatePoll(ctx, poll.id, { status: poll.status });
+        }
+
+        return poll;
     }
 
     @Transaction()
@@ -35,7 +70,6 @@ export class VotingSystemContract extends Contract {
 
     @Transaction(false)
     @Returns('string')
-    @ProtectedMethod({ roles: [UserRole.ADMIN] })
     public async GetExistingUser(ctx: Context, studentIdNumber: string): Promise<string> {
         const user = await this.userRepository.getUser(ctx, studentIdNumber)
         if (!user) throw new Error(`User with student id ${studentIdNumber} does not exist`)
@@ -46,9 +80,9 @@ export class VotingSystemContract extends Contract {
     @Transaction()
     public async RegisterUser(ctx: Context, firstName: string, lastName: string, studentIdNumber: string, passwordHash: string, secretKeyHash: string): Promise<void> {
         const user = await this.userRepository.getUser(ctx, studentIdNumber)
-        if (user) throw new Error(`User with student ID ${studentIdNumber} already exists`)
+        if (user) throw new Error('User with this student id already exists in the system')
 
-        const newUser = User.create({ firstName, lastName, studentIdNumber, passwordHash, secretKeyHash, kycStatus: KycApplicationStatus.PENDING })
+        const newUser = User.create({ firstName, lastName, studentIdNumber, passwordHash, secretKeyHash, kycStatus: KycApplicationStatus.PENDING, role: UserRole.STUDENT })
         const newKycApplication = KYCApplication.create({ userId: studentIdNumber, status: KycApplicationStatus.PENDING })
 
         await this.userRepository.createUser(ctx, newUser)
@@ -81,7 +115,9 @@ export class VotingSystemContract extends Contract {
                 authorStudentIdNumber: studentIdNumber,
                 plannedStartDate: !plannedStartDate || plannedStartDate === 'null' ? null : Number(plannedStartDate),
                 plannedEndDate: !plannedEndDate || plannedEndDate === 'null' ? null : Number(plannedEndDate),
-                status: PollStatus.REVIEW
+                status: PollStatus.REVIEW,
+                optionIds: [],
+                participantIds: []
             }
         )
 
@@ -90,7 +126,7 @@ export class VotingSystemContract extends Contract {
 
     @Transaction()
     @ProtectedMethod({ roles: [UserRole.STUDENT], kycVerification: true })
-    public async AddPollQuestion(ctx: Context, studentIdNumber: string, pollId: string, text: string): Promise<void> {
+    public async AddPollOption(ctx: Context, studentIdNumber: string, pollId: string, text: string): Promise<void> {
         const poll = await this.pollRepository.getPollById(ctx, pollId)
         if (!poll || poll.authorStudentIdNumber !== studentIdNumber) {
             throw new Error(`Poll with id ${pollId} does not exist or you don't have access to it`)
@@ -100,9 +136,9 @@ export class VotingSystemContract extends Contract {
             throw new Error(`Poll is in status ${poll.status} and cannot be updated`)
         }
 
-        const question = await this.pollQuestionRepository.createPollQuestion(ctx, pollId, text);
+        const option = await this.pollOptionRepository.createPollOption(ctx, pollId, text);
 
-        poll.questionIds.push(question.id)
+        poll.optionIds.push(option.id)
 
         if ([PollStatus.APPROVED_AND_WAITING, PollStatus.DECLINED].includes(poll.status)) {
             poll.status = PollStatus.REVIEW;
@@ -113,8 +149,8 @@ export class VotingSystemContract extends Contract {
 
     @Transaction()
     @ProtectedMethod({ roles: [UserRole.STUDENT], kycVerification: true })
-    public async DeletePollQuestion(ctx: Context, studentIdNumber: string, pollId: string, questionId: string): Promise<void> {
-        const poll = await this.pollRepository.getPollById(ctx, pollId)
+    public async DeletePollOption(ctx: Context, studentIdNumber: string, pollId: string, optionId: string): Promise<void> {
+        let poll = await this.pollRepository.getPollById(ctx, pollId)
         if (!poll || poll.authorStudentIdNumber !== studentIdNumber) {
             throw new Error(`Poll with id ${pollId} does not exist or you don't have access to it`)
         }
@@ -123,10 +159,12 @@ export class VotingSystemContract extends Contract {
             throw new Error(`Poll is in status ${poll.status} and cannot be updated`)
         }
 
-        poll.questionIds = poll.questionIds.filter(id => id !== questionId)
-        poll.status = PollStatus.REVIEW
+        poll = poll.copy({
+            optionIds: poll.optionIds.filter(id => id !== optionId),
+            status: PollStatus.REVIEW
+        })
 
-        await this.pollQuestionRepository.deletePollQuestion(ctx, questionId)
+        await this.pollOptionRepository.deletePollOption(ctx, optionId)
         await this.pollRepository.updatePoll(ctx, pollId, poll)
     }
 
@@ -134,15 +172,17 @@ export class VotingSystemContract extends Contract {
     @Returns('string')
     @ProtectedMethod({ roles: [UserRole.ADMIN] })
     public async GetPollsListInReviewStatus(ctx: Context, studentIdNumber: string): Promise<string> {
-        const polls = await this.pollRepository.getPollsByStatus(ctx, PollStatus.REVIEW)
+        const polls = await this.pollRepository.getPollsByStatus(ctx, PollStatus.REVIEW);
 
-        return JSON.stringify({ currentStudentId: studentIdNumber, data: polls })
+        // No need to check dates for polls in REVIEW status as they haven't been approved yet
+
+        return JSON.stringify({ currentStudentId: studentIdNumber, data: polls });
     }
 
     @Transaction()
     @ProtectedMethod({ roles: [UserRole.ADMIN] })
     public async UpdatePollReviewStatus(ctx: Context, studentIdNumber: string, pollId: string, status: PollStatus): Promise<void> {
-        const poll = await this.pollRepository.getPollById(ctx, pollId)
+        let poll = await this.pollRepository.getPollById(ctx, pollId)
 
         if (!poll) {
             throw new Error(`Poll with id ${pollId} does not exist`)
@@ -156,7 +196,19 @@ export class VotingSystemContract extends Contract {
             throw new Error(`Poll with id ${pollId} cannot be updated to status ${status} by ADMIN`)
         }
 
-        await this.pollRepository.updatePoll(ctx, pollId, { status })
+        // Update the poll status
+        await this.pollRepository.updatePoll(ctx, pollId, { status });
+
+        // If the poll was approved and has a plannedStartDate that has already passed,
+        // we need to check if it should be immediately set to ACTIVE
+        if (status === PollStatus.APPROVED_AND_WAITING) {
+            // Get the updated poll
+            poll = await this.pollRepository.getPollById(ctx, pollId);
+            if (poll) {
+                // Check and update poll status based on dates
+                await this.checkAndUpdatePollStatus(ctx, poll);
+            }
+        }
     }
 
     @Transaction()
@@ -204,13 +256,25 @@ export class VotingSystemContract extends Contract {
     @Transaction()
     @ProtectedMethod({ roles: [UserRole.STUDENT] })
     public async StartPoll(ctx: Context, studentIdNumber: string, pollId: string): Promise<void> {
-        const poll = await this.pollRepository.getPollById(ctx, pollId)
+        let poll = await this.pollRepository.getPollById(ctx, pollId)
         if (!poll) {
             throw new Error(`Poll with id ${pollId} does not exist`)
         }
 
         if (poll.authorStudentIdNumber !== studentIdNumber) {
             throw new Error(`You can't start poll with id ${pollId} as it was not created by you`)
+        }
+
+        // Check if poll status should be updated based on dates
+        poll = await this.checkAndUpdatePollStatus(ctx, poll);
+
+        // If poll is already ACTIVE or FINISHED after date check, inform the user
+        if (poll.status === PollStatus.ACTIVE) {
+            throw new Error(`Poll with id ${pollId} is already active (automatically activated based on plannedStartDate)`)
+        }
+
+        if (poll.status === PollStatus.FINISHED) {
+            throw new Error(`Poll with id ${pollId} is already finished (automatically finished based on plannedEndDate)`)
         }
 
         if (poll.status !== PollStatus.APPROVED_AND_WAITING ||
@@ -225,13 +289,21 @@ export class VotingSystemContract extends Contract {
     @Transaction()
     @ProtectedMethod({ roles: [UserRole.STUDENT] })
     public async StopPoll(ctx: Context, studentIdNumber: string, pollId: string): Promise<void> {
-        const poll = await this.pollRepository.getPollById(ctx, pollId)
+        let poll = await this.pollRepository.getPollById(ctx, pollId)
         if (!poll) {
             throw new Error(`Poll with id ${pollId} does not exist`)
         }
 
         if (poll.authorStudentIdNumber !== studentIdNumber) {
             throw new Error(`You can't stop poll with id ${pollId} as it was not created by you`)
+        }
+
+        // Check if poll status should be updated based on dates
+        poll = await this.checkAndUpdatePollStatus(ctx, poll);
+
+        // If poll is already FINISHED after date check, inform the user
+        if (poll.status === PollStatus.FINISHED) {
+            throw new Error(`Poll with id ${pollId} is already finished (automatically finished based on plannedEndDate)`)
         }
 
         if (poll.status !== PollStatus.ACTIVE ||
@@ -244,7 +316,7 @@ export class VotingSystemContract extends Contract {
     }
 
     @Transaction()
-    @ProtectedMethod({ roles: [UserRole.STUDENT] })
+    @ProtectedMethod()
     public async GetCurrentUserInfo(ctx: Context, studentIdNumber: string): Promise<string> {
         return JSON.stringify(await this.userRepository.getUser(ctx, studentIdNumber))
     }
@@ -264,11 +336,14 @@ export class VotingSystemContract extends Contract {
 
     @Transaction()
     @ProtectedMethod({ roles: [UserRole.STUDENT], kycVerification: true })
-    public async GiveVote(ctx: Context, studentIdNumber: string, pollId: string, questionId: string): Promise<void> {
-        const poll = await this.pollRepository.getPollById(ctx, pollId)
+    public async GiveVote(ctx: Context, studentIdNumber: string, pollId: string, optionId: string): Promise<void> {
+        let poll = await this.pollRepository.getPollById(ctx, pollId)
         if (!poll) {
             throw new Error(`Poll with id ${pollId} does not exist`)
         }
+
+        // Check and update poll status based on dates
+        poll = await this.checkAndUpdatePollStatus(ctx, poll);
 
         if (poll.status !== PollStatus.ACTIVE) {
             throw new Error(`Poll with id ${pollId} is not active`)
@@ -278,68 +353,168 @@ export class VotingSystemContract extends Contract {
             throw new Error(`User with student ID ${studentIdNumber} has already voted in poll with id ${pollId}`)
         }
 
-        const pollQuestion = await this.pollQuestionRepository.getPollQuestionById(ctx, questionId)
+        const pollOption = await this.pollOptionRepository.getPollOptionById(ctx, optionId)
 
-        if (!pollQuestion) {
-            throw new Error(`Question with id ${questionId} does not exist`)
+        if (!pollOption) {
+            throw new Error(`Option with id ${optionId} does not exist`)
         }
 
-        if (pollQuestion.pollId !== pollId) {
-            throw new Error(`Question with id ${questionId} does not belong to poll with id ${pollId}`)
+        if (pollOption.pollId !== pollId) {
+            throw new Error(`Option with id ${optionId} does not belong to poll with id ${pollId}`)
         }
 
-        await this.pollQuestionRepository.incrementVoteCount(ctx, questionId)
+        await this.pollOptionRepository.incrementVoteCount(ctx, optionId)
 
         await this.pollRepository.updatePoll(ctx, pollId, {
             participantIds: [...poll.participantIds, studentIdNumber]
         })
     }
 
-    @Transaction(false)
+    @Transaction()
     @Returns('string')
-    @ProtectedMethod({ roles: [UserRole.STUDENT, UserRole.ADMIN], kycVerification: true })
-    public async GetPollById(ctx: Context, studentIdNumber: string, pollId: string): Promise<string> {
-        const poll = await this.pollRepository.getPollById(ctx, pollId)
+    public async GetPollById(ctx: Context, pollId: string): Promise<string> {
+        let poll = await this.pollRepository.getPollById(ctx, pollId)
         if (!poll) {
             throw new Error(`Poll with id ${pollId} does not exist`)
         }
+
+        // Check and update the poll status based on start/end dates
+        poll = await this.checkAndUpdatePollStatus(ctx, poll);
 
         return JSON.stringify(poll)
     }
 
     @Transaction(false)
     @Returns('string')
-    @ProtectedMethod({ roles: [UserRole.STUDENT, UserRole.ADMIN], kycVerification: true })
-    public async GetPollQuestionsByPollId(ctx: Context, studentIdNumber: string, pollId: string): Promise<string> {
-        const poll = await this.pollRepository.getPollById(ctx, pollId)
+    public async GetPollOptionsByPollId(ctx: Context, pollId: string): Promise<string> {
+        let poll = await this.pollRepository.getPollById(ctx, pollId)
         if (!poll) {
             throw new Error(`Poll with id ${pollId} does not exist`)
         }
 
-        const questions = []
-        for (const questionId of poll.questionIds) {
-            const question = await this.pollQuestionRepository.getPollQuestionById(ctx, questionId)
-            if (question) {
-                questions.push(question)
+        // Check and update the poll status based on dates
+        poll = await this.checkAndUpdatePollStatus(ctx, poll);
+
+        const options = []
+        for (const optionId of poll.optionIds) {
+            const option = await this.pollOptionRepository.getPollOptionById(ctx, optionId)
+            if (option) {
+                options.push(option)
             }
         }
 
-        return JSON.stringify(questions)
+        return JSON.stringify(options)
     }
 
     @Transaction(false)
     @Returns('string')
-    @ProtectedMethod({ roles: [UserRole.STUDENT, UserRole.ADMIN], kycVerification: true })
-    public async GetActivePolls(ctx: Context, studentIdNumber: string): Promise<string> {
-        const polls = await this.pollRepository.getPollsByStatus(ctx, PollStatus.ACTIVE)
-        return JSON.stringify(polls)
+    public async GetActivePolls(ctx: Context): Promise<string> {
+        // Get polls that are already marked as ACTIVE
+        const activePolls = await this.pollRepository.getPollsByStatus(ctx, PollStatus.ACTIVE);
+
+        // Get polls that are in APPROVED_AND_WAITING status and might need to be updated
+        const approvedAndWaitingPolls = await this.pollRepository.getPollsByStatus(ctx, PollStatus.APPROVED_AND_WAITING);
+
+        const currentTime = ctx.stub.getTxTimestamp().seconds.toNumber();
+
+        // Check each APPROVED_AND_WAITING poll to see if it should be treated as ACTIVE based on dates
+        const updatedPolls = [];
+        for (const poll of approvedAndWaitingPolls) {
+            // Check if a poll should be treated as ACTIVE based on a plannedStartDate
+            if (poll.plannedStartDate && currentTime >= poll.plannedStartDate) {
+                // If the plannedEndDate has passed, it should be treated as FINISHED, not as ACTIVE
+                if (!poll.plannedEndDate || currentTime < poll.plannedEndDate) {
+                    // Should be treated as ACTIVE
+                    updatedPolls.push(Object.assign({}, poll, { status: PollStatus.ACTIVE }));
+                }
+            }
+        }
+
+        // Check each ACTIVE poll to see if it should be FINISHED based on dates
+        const stillActivePolls = [];
+        for (const poll of activePolls) {
+            // Check if a poll should still be treated as ACTIVE based on plannedEndDate
+            if (poll.plannedEndDate && currentTime >= poll.plannedEndDate) {
+                continue;
+            }
+
+            stillActivePolls.push(poll)
+        }
+
+        return JSON.stringify([...stillActivePolls, ...updatedPolls]);
     }
 
     @Transaction(false)
     @Returns('string')
-    @ProtectedMethod({ roles: [UserRole.STUDENT, UserRole.ADMIN], kycVerification: true })
-    public async GetFinishedPolls(ctx: Context, studentIdNumber: string): Promise<string> {
-        const polls = await this.pollRepository.getPollsByStatus(ctx, PollStatus.FINISHED)
-        return JSON.stringify(polls)
+    public async GetFinishedPolls(ctx: Context): Promise<string> {
+        // Get polls that are already marked as FINISHED
+        const finishedPolls = await this.pollRepository.getPollsByStatus(ctx, PollStatus.FINISHED);
+
+        // Get polls that are in ACTIVE status and might need to be updated to FINISHED
+        const activePolls = await this.pollRepository.getPollsByStatus(ctx, PollStatus.ACTIVE);
+
+        // Get polls that are in APPROVED_AND_WAITING status and might need to be treated as FINISHED
+        const approvedAndWaitingPolls = await this.pollRepository.getPollsByStatus(ctx, PollStatus.APPROVED_AND_WAITING);
+
+        const currentTime = ctx.stub.getTxTimestamp().seconds.toNumber();
+
+        // Check each ACTIVE poll to see if it should be treated as FINISHED based on dates
+        const newlyFinishedPolls = [];
+        for (const poll of activePolls) {
+            // Check if a poll should be treated as FINISHED based on plannedEndDate
+            if (poll.plannedEndDate && currentTime >= poll.plannedEndDate) {
+                newlyFinishedPolls.push(Object.assign({}, poll, { status: PollStatus.FINISHED }));
+            }
+        }
+
+        // Check each APPROVED_AND_WAITING poll to see if it should be treated as FINISHED based on dates
+        const finishedApprovedPolls = [];
+        for (const poll of approvedAndWaitingPolls) {
+            // Check if a poll should be treated as FINISHED based on plannedStartDate and plannedEndDate
+            if (poll.plannedStartDate !== null && poll.plannedEndDate !== null &&
+                currentTime >= poll.plannedStartDate && currentTime >= poll.plannedEndDate) {
+                finishedApprovedPolls.push(Object.assign({}, poll, { status: PollStatus.FINISHED }));
+            }
+        }
+
+        return JSON.stringify([...finishedPolls, ...newlyFinishedPolls, ...finishedApprovedPolls]);
+    }
+
+    @Transaction(false)
+    @Returns('string')
+    @ProtectedMethod({ roles: [UserRole.STUDENT], kycVerification: true })
+    public async GetMyPendingPolls(ctx: Context, studentIdNumber: string): Promise<string> {
+        // Get polls created by this user that are in REVIEW, DECLINED, or APPROVED_AND_WAITING status
+        const pendingPolls = await this.pollRepository.getPollsByCreatorAndStatus(ctx, studentIdNumber,
+            [PollStatus.REVIEW, PollStatus.DECLINED, PollStatus.APPROVED_AND_WAITING]);
+
+        const currentTime = ctx.stub.getTxTimestamp().seconds.toNumber();
+
+        // Filter out polls that should be treated as ACTIVE based on plannedStartDate
+        // Keep polls in DECLINED status regardless of dates
+        const filteredPolls = pendingPolls.filter(poll => {
+            // Always keep polls in DECLINED status
+            if (poll.status === PollStatus.DECLINED) {
+                return true;
+            }
+
+            // Check if poll should be treated as ACTIVE based on plannedStartDate
+            if (poll.status === PollStatus.APPROVED_AND_WAITING &&
+                poll.plannedStartDate !== null &&
+                currentTime >= poll.plannedStartDate) {
+
+                // If plannedEndDate has passed, it should be treated as FINISHED, not as pending
+                if (poll.plannedEndDate !== null && currentTime >= poll.plannedEndDate) {
+                    return false;
+                }
+
+                // Should be treated as ACTIVE, not as pending
+                return false;
+            }
+
+            return true;
+        });
+
+        return JSON.stringify(filteredPolls);
     }
 }

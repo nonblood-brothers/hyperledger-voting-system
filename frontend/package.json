@@ -15,6 +15,7 @@
     "@types/react-router-dom": "^5.3.3",
     "axios": "^1.9.0",
     "bootstrap": "^5.3.6",
+    "crypto-js": "^4.2.0",
     "jsonwebtoken": "^9.0.2",
     "react": "^19.1.0",
     "react-bootstrap": "^2.10.10",
@@ -47,5 +48,8 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "@types/crypto-js": "^4.2.2"
   }
 }

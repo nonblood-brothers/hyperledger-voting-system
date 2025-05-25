@@ -1,14 +1,10 @@
 import api from './api.service';
 import { ApiResponse, User } from '../types';
+import sha256 from 'crypto-js/sha256';
 
 // Helper function to hash a string (in a real app, this would be done on the server)
-export async function hashString(str: string): Promise<string> {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(str);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-  return hashHex;
+export function hashString(str: string): string {
+  return sha256(str).toString()
 }
 
 // Authentication API
@@ -25,9 +21,9 @@ export const authApi = {
 
   // Register user
   register: async (firstName: string, lastName: string, studentIdNumber: string, password: string, secretKey: string) => {
-    // Hash password and secretKey on client side (in a real app, this would be done on the server)
-    const passwordHash = await hashString(password);
-    const secretKeyHash = await hashString(secretKey);
+    // Hash password and secretKey on the client side (in a real app, this would be done on the server)
+    const passwordHash = hashString(password);
+    const secretKeyHash = hashString(secretKey);
 
     const response = await api.post<ApiResponse<void>>('/tx/submit', {
       method: 'RegisterUser',
@@ -36,7 +32,7 @@ export const authApi = {
     return response.data;
   },
 
-  // Check if user is authenticated
+  // Check if the user is authenticated
   isAuthenticated: async () => {
     const response = await api.post<ApiResponse<{ authenticated: boolean; studentIdNumber: string }>>('/tx/evaluate', {
       method: 'IsAuthenticated',

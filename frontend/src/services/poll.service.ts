@@ -1,5 +1,5 @@
 import api from './api.service';
-import { ApiResponse, Poll, PollQuestion, PollStatus } from '../types';
+import { ApiResponse, Poll, PollOption, PollStatus } from '../types';
 
 // Poll API
 export const pollApi = {
@@ -17,20 +17,20 @@ export const pollApi = {
     return response.data;
   },
 
-  // Add a question to a poll
-  addPollQuestion: async (pollId: string, text: string) => {
+  // Add an option to a poll
+  addPollOption: async (pollId: string, text: string) => {
     const response = await api.post<ApiResponse<void>>('/tx/submit', {
-      method: 'AddPollQuestion',
+      method: 'AddPollOption',
       args: [pollId, text],
     });
     return response.data;
   },
 
-  // Delete a question from a poll
-  deletePollQuestion: async (pollId: string, questionId: string) => {
+  // Delete an option from a poll
+  deletePollOption: async (pollId: string, optionId: string) => {
     const response = await api.post<ApiResponse<void>>('/tx/submit', {
-      method: 'DeletePollQuestion',
-      args: [pollId, questionId],
+      method: 'DeletePollOption',
+      args: [pollId, optionId],
     });
     return response.data;
   },
@@ -93,27 +93,27 @@ export const pollApi = {
   },
 
   // Vote in a poll
-  vote: async (pollId: string, questionId: string) => {
+  vote: async (pollId: string, optionId: string) => {
     const response = await api.post<ApiResponse<void>>('/tx/submit', {
       method: 'GiveVote',
-      args: [pollId, questionId],
+      args: [pollId, optionId],
     });
     return response.data;
   },
 
   // Get poll by ID
   getPollById: async (pollId: string) => {
-    const response = await api.post<ApiResponse<Poll>>('/tx/evaluate', {
+    const response = await api.post<ApiResponse<Poll>>('/tx/submit', {
       method: 'GetPollById',
       args: [pollId],
     });
     return response.data.result;
   },
 
-  // Get poll questions by poll ID
-  getPollQuestionsByPollId: async (pollId: string) => {
-    const response = await api.post<ApiResponse<PollQuestion[]>>('/tx/evaluate', {
-      method: 'GetPollQuestionsByPollId',
+  // Get poll options by poll ID
+  getPollOptionsByPollId: async (pollId: string) => {
+    const response = await api.post<ApiResponse<PollOption[]>>('/tx/evaluate', {
+      method: 'GetPollOptionsByPollId',
       args: [pollId],
     });
     return response.data.result;
@@ -132,6 +132,15 @@ export const pollApi = {
   getFinishedPolls: async () => {
     const response = await api.post<ApiResponse<Poll[]>>('/tx/evaluate', {
       method: 'GetFinishedPolls',
+      args: [],
+    });
+    return response.data.result;
+  },
+
+  // Get my pending polls (polls in REVIEW status created by the current user)
+  getMyPendingPolls: async () => {
+    const response = await api.post<ApiResponse<Poll[]>>('/tx/evaluate', {
+      method: 'GetMyPendingPolls',
       args: [],
     });
     return response.data.result;

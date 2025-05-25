@@ -1,6 +1,5 @@
 import { UserRole } from '../enum/user-role.enum';
 import { UserRepository } from '../repository/user.repository';
-
 import { KycApplicationStatus } from '../enum/kyc-application-status.enum';
 
 import { Context } from 'fabric-contract-api';
@@ -23,8 +22,8 @@ export function ProtectedMethod(options?: ProtectedMethodOptions) {
                 throw new Error(`User with student ID ${studentIdNumber} does not exist`)
             }
 
-            if (options?.roles?.length && !options.roles.includes(user.role as UserRole)) {
-                throw new Error('Forbidden by role')
+            if (options?.roles?.length && !options.roles.includes(user.role)) {
+                throw new Error(`Forbidden by role, ${options.roles.join(', ')} are allowed, ${user.role} provided`);
             }
 
             if (options?.kycVerification && user.kycStatus !== KycApplicationStatus.APPROVED) {

@@ -51,7 +51,7 @@ export interface Poll {
     title: string;
     description: string;
     authorStudentIdNumber: string;
-    questionIds: string[];
+    optionIds: string[];
     participantIds: string[];
     plannedStartDate: number | null;
     plannedEndDate: number | null;
@@ -60,8 +60,8 @@ export interface Poll {
     updatedAt: number;
 }
 
-// Poll Question interface
-export interface PollQuestion {
+// Poll Option interface
+export interface PollOption {
     id: string;
     pollId: string;
     text: string;

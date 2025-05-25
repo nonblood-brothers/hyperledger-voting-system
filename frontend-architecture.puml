@@ -1,0 +1,167 @@
+@startuml "Frontend Architecture"
+allowmixing
+
+' Define package styles
+skinparam package {
+  BackgroundColor LightGray
+  BorderColor Black
+  FontColor Black
+}
+
+' Define component styles
+skinparam component {
+  BackgroundColor LightBlue
+  BorderColor Black
+  FontColor Black
+}
+
+' Define class styles
+skinparam class {
+  BackgroundColor LightGreen
+  BorderColor Black
+  FontColor Black
+}
+
+' Define interface styles
+skinparam interface {
+  BackgroundColor LightYellow
+  BorderColor Black
+  FontColor Black
+}
+
+' Main Application
+package "App" {
+  component [App.tsx] as App
+}
+
+' Components
+package "Components" {
+  component [Navigation.tsx] as Navigation
+  component [ProtectedRoute.tsx] as ProtectedRoute
+}
+
+' Pages
+package "Pages" {
+  ' Authentication Pages
+  component [Login.tsx] as Login
+  component [Register.tsx] as Register
+  
+  ' KYC Pages
+  component [KycPending.tsx] as KycPending
+  component [KycRejected.tsx] as KycRejected
+  
+  ' Poll Pages
+  component [PollList.tsx] as PollList
+  component [PollDetail.tsx] as PollDetail
+  component [CreatePoll.tsx] as CreatePoll
+  component [PollOptions.tsx] as PollOptions
+  
+  ' Admin Pages
+  package "Admin" {
+    component [KycReview.tsx] as KycReview
+    component [PollReview.tsx] as PollReview
+  }
+}
+
+' Context
+package "Context" {
+  component [AuthContext.tsx] as AuthContext
+}
+
+' Services
+package "Services" {
+  component [api.service.ts] as ApiService
+  component [auth.service.ts] as AuthService
+  component [poll.service.ts] as PollService
+  component [user.service.ts] as UserService
+}
+
+' Utils
+package "Utils" {
+  component [jwt.utils.ts] as JwtUtils
+}
+
+' Types
+package "Types" {
+  class "User" as UserType
+  class "Poll" as PollType
+  class "PollOption" as PollOptionType
+  class "KycApplication" as KycApplicationType
+  class "ApiResponse" as ApiResponseType
+  
+  enum "UserRole" as UserRoleEnum {
+    UNDEFINED
+    STUDENT
+    ADMIN
+  }
+  
+  enum "KycApplicationStatus" as KycStatusEnum {
+    UNDEFINED
+    APPROVED
+    REJECTED
+    PENDING
+  }
+  
+  enum "PollStatus" as PollStatusEnum {
+    UNDEFINED
+    REVIEW
+    DECLINED
+    APPROVED_AND_WAITING
+    ACTIVE
+    FINISHED
+  }
+}
+
+' Relationships
+
+' App relationships
+App --> Navigation : includes
+App --> AuthContext : uses
+App --> Login : routes to
+App --> Register : routes to
+App --> KycPending : routes to
+App --> KycRejected : routes to
+App --> KycReview : routes to
+App --> PollReview : routes to
+App --> PollList : routes to
+App --> PollDetail : routes to
+App --> CreatePoll : routes to
+App --> PollOptions : routes to
+App --> ProtectedRoute : uses
+
+' Component relationships
+Navigation --> AuthContext : uses
+ProtectedRoute --> AuthContext : uses
+
+' Page relationships
+Login --> AuthService : uses
+Register --> AuthService : uses
+KycReview --> UserService : uses
+PollReview --> PollService : uses
+PollList --> PollService : uses
+PollDetail --> PollService : uses
+CreatePoll --> PollService : uses
+PollOptions --> PollService : uses
+
+' Context relationships
+AuthContext --> AuthService : uses
+AuthContext --> JwtUtils : uses
+
+' Service relationships
+AuthService --> ApiService : uses
+PollService --> ApiService : uses
+UserService --> ApiService : uses
+AuthService ..> UserType : uses
+PollService ..> PollType : uses
+PollService ..> PollOptionType : uses
+PollService ..> PollStatusEnum : uses
+UserService ..> KycApplicationType : uses
+UserService ..> KycStatusEnum : uses
+
+' Type relationships
+UserType --> UserRoleEnum : uses
+UserType --> KycStatusEnum : uses
+KycApplicationType --> KycStatusEnum : uses
+PollType --> PollStatusEnum : uses
+
+@enduml

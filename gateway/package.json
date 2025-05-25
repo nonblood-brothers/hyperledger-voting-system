@@ -9,10 +9,11 @@
     },
     "scripts": {
         "build": "tsc && tsc-alias",
+        "build:frontend": "cd ../frontend && npm run build",
         "lint": "eslint src",
         "prepare": "npm run build",
         "pretest": "npm run lint",
-        "start": "node dist/app.js",
+        "start": "npm run build:frontend && node dist/app.js",
         "start:dev": "nodemon -i dist -e ts --exec \"npm run build && npm run start\""
     },
     "engineStrict": true,
@@ -22,12 +23,14 @@
         "@grpc/grpc-js": "^1.12.2",
         "@hyperledger/fabric-gateway": "^1.7.0",
         "body-parser": "^1.20.3",
+        "cors": "^2.8.5",
         "express": "^4.21.2",
         "jsonwebtoken": "^9.0.2"
     },
     "devDependencies": {
         "@eslint/js": "^9.3.0",
         "@tsconfig/node18": "^18.2.2",
+        "@types/cors": "^2.8.17",
         "@types/express": "^5.0.0",
         "@types/jsonwebtoken": "^9.0.9",
         "@types/node": "^18.18.6",

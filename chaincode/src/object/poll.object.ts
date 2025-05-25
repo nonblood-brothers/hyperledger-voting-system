@@ -13,7 +13,7 @@ export class Poll extends Data {
 
     public authorStudentIdNumber!: string;
 
-    public questionIds!: string[];
+    public optionIds!: string[];
 
     public participantIds!: string[];
 

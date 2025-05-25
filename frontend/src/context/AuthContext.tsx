@@ -60,7 +60,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       // Redirect based on user role and KYC status
       if (userInfo.role === UserRole.ADMIN) {
-        navigate('/admin/dashboard');
+        navigate('/polls');
       } else if (userInfo.kycStatus === KycApplicationStatus.PENDING) {
         navigate('/kyc-pending');
       } else if (userInfo.kycStatus === KycApplicationStatus.REJECTED) {
@@ -95,7 +95,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const logout = () => {
     localStorage.removeItem('token');
     setUser(null);
-    navigate('/login');
+    // Navigation is handled by the component that calls this function
   };
 
   // Refresh user info

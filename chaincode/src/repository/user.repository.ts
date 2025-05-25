@@ -10,8 +10,7 @@ export class UserRepository extends ObjectRepository {
 
         const newUser = User.create(
             Object.assign(
-                new User(),
-                user,
+                { ...user },
                 { createdAt: currentTimestamp, updatedAt: currentTimestamp }
             )
         )

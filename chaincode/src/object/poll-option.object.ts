@@ -1,7 +1,7 @@
 import { Data } from 'dataclass';
 
-export class PollQuestion extends Data {
-    static objectIdentifier = 'poll-question';
+export class PollOption extends Data {
+    static objectIdentifier = 'poll-option';
 
     public id!: string;
 

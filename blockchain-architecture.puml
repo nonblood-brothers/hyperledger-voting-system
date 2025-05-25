@@ -1,0 +1,121 @@
+@startuml "Voting System Architecture"
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+' Define custom colors
+!define HYPERLEDGER_COLOR #5D9CEC
+!define CHAINCODE_COLOR #48CFAD
+!define GATEWAY_COLOR #FC6E51
+!define FRONTEND_COLOR #AC92EC
+!define DATABASE_COLOR #4FC1E9
+
+' Define custom sprites
+sprite $blockchain [48x48/16] {
+  0000000000000000000000000000000000000000000000000000
+  0000000000000000000000000000000000000000000000000000
+  0000000000000000000000000000000000000000000000000000
+  0000000000000000000000000000000000000000000000000000
+  0000000000000000000000000000000000000000000000000000
+  0000000000000000000000000000000000000000000000000000
+  0000000000000000000000000000000000000000000000000000
+  0000000000000000000000000000000000000000000000000000
+  0000000000000000000000000000000000000000000000000000
+  0000000000000000000000000000000000000000000000000000
+  0000000000000000000000000000000000000000000000000000
+  0000000000000000000000000000000000000000000000000000
+  0000000000000000000000000000000000000000000000000000
+  0000000000000000000000000000000000000000000000000000
+  0000000000000000000000000000000000000000000000000000
+  0000000000000000000000000000000000000000000000000000
+  0000000000000000000000000000000000000000000000000000
+  0000000000000000000000000000000000000000000000000000
+  0000000000000000000000000000000000000000000000000000
+  0000000000000000000000000000000000000000000000000000
+  0000000000000000000000000000000000000000000000000000
+  0000000000000000000000000000000000000000000000000000
+  0000000000000000000000000000000000000000000000000000
+  0000000000000000000000000000000000000000000000000000
+}
+
+' TITLE
+title "Electronic Voting System - Blockchain Architecture"
+
+' LEGEND
+legend right
+  |= Component |= Description |
+  | <$person> | User |
+  | <$container> | Application Component |
+  | <$database> | Database/Ledger |
+  | <$blockchain> | Blockchain Component |
+endlegend
+
+' ACTORS
+Person(student, "Student", "Registered user who can create polls and vote")
+Person(admin, "Administrator", "System admin who approves polls and KYC applications")
+
+' FRONTEND SYSTEM
+System_Boundary(frontend_system, "Frontend") {
+  Container(react_app, "React Application", "TypeScript, React", "Web-based user interface for the voting system", $sprite="react", $tags="frontend")
+  Container(auth_context, "Auth Context", "React Context API", "Manages authentication state", $tags="frontend")
+  Container(api_service, "API Service", "Axios", "Handles API requests to the gateway", $tags="frontend")
+  Container(poll_service, "Poll Service", "TypeScript", "Handles poll-related operations", $tags="frontend")
+  Container(auth_service, "Auth Service", "TypeScript", "Handles authentication operations", $tags="frontend")
+}
+
+' GATEWAY SYSTEM
+System_Boundary(gateway_system, "Gateway") {
+  Container(express_server, "Express Server", "Node.js, Express", "REST API server", $tags="gateway")
+  Container(auth_middleware, "Auth Middleware", "JWT", "Handles authentication and authorization", $tags="gateway")
+  Container(tx_handler, "Transaction Handler", "TypeScript", "Processes blockchain transactions", $tags="gateway")
+  Container(fabric_gateway, "Fabric Gateway", "Node.js SDK", "Connects to the Hyperledger Fabric network", $tags="gateway")
+}
+
+' HYPERLEDGER FABRIC NETWORK
+System_Boundary(fabric_network, "Hyperledger Fabric Network") {
+  Container(peer_nodes, "Peer Nodes", "Docker", "Maintains the ledger and executes chaincode", $sprite="blockchain", $tags="hyperledger")
+  Container(ordering_service, "Ordering Service", "Docker", "Orders transactions into blocks", $sprite="blockchain", $tags="hyperledger")
+  Container(ca, "Certificate Authority", "Docker", "Issues and manages certificates", $sprite="blockchain", $tags="hyperledger")
+  
+  ' CHAINCODE
+  System_Boundary(chaincode, "Chaincode (Smart Contract)") {
+    Container(voting_contract, "VotingSystemContract", "TypeScript", "Main contract implementing business logic", $tags="chaincode")
+    Container(repositories, "Repositories", "TypeScript", "Data access layer for the ledger", $tags="chaincode")
+    Container(domain_objects, "Domain Objects", "TypeScript", "Business entities (User, Poll, etc.)", $tags="chaincode")
+    Container(decorators, "Decorators", "TypeScript", "Method protection and logging", $tags="chaincode")
+  }
+  
+  ContainerDb(world_state, "World State", "LevelDB/CouchDB", "Current state of the ledger", $tags="hyperledger")
+  ContainerDb(blockchain, "Blockchain", "Files", "Immutable record of all transactions", $tags="hyperledger")
+}
+
+' RELATIONSHIPS - FRONTEND
+Rel(student, react_app, "Uses", "HTTPS")
+Rel(admin, react_app, "Uses", "HTTPS")
+Rel(react_app, auth_context, "Uses")
+Rel(react_app, poll_service, "Uses")
+Rel(react_app, auth_service, "Uses")
+Rel(poll_service, api_service, "Uses")
+Rel(auth_service, api_service, "Uses")
+Rel(api_service, express_server, "Sends requests to", "HTTPS/REST")
+
+' RELATIONSHIPS - GATEWAY
+Rel(express_server, auth_middleware, "Uses")
+Rel(express_server, tx_handler, "Routes requests to")
+Rel(tx_handler, fabric_gateway, "Submits/evaluates transactions via")
+Rel(fabric_gateway, peer_nodes, "Connects to", "gRPC")
+
+' RELATIONSHIPS - HYPERLEDGER FABRIC
+Rel(peer_nodes, voting_contract, "Executes")
+Rel(peer_nodes, world_state, "Reads/Writes")
+Rel(peer_nodes, blockchain, "Appends to")
+Rel(peer_nodes, ordering_service, "Sends transactions to", "gRPC")
+Rel(ordering_service, peer_nodes, "Delivers blocks to", "gRPC")
+Rel(ca, peer_nodes, "Issues certificates to")
+Rel(ca, ordering_service, "Issues certificates to")
+
+' RELATIONSHIPS - CHAINCODE
+Rel(voting_contract, repositories, "Uses")
+Rel(repositories, domain_objects, "Creates/Updates")
+Rel(voting_contract, decorators, "Uses")
+Rel(repositories, world_state, "Reads/Writes via Fabric API")
+
+@enduml

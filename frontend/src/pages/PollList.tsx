@@ -6,11 +6,12 @@ import { pollApi } from '../services/poll.service';
 import { Poll, PollStatus } from '../types';
 
 const PollList: React.FC = () => {
-  const { isAdmin, isKycVerified } = useAuth();
+  const { isAdmin, isKycVerified, user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [activePolls, setActivePolls] = useState<Poll[]>([]);
   const [finishedPolls, setFinishedPolls] = useState<Poll[]>([]);
+  const [pendingPolls, setPendingPolls] = useState<Poll[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState<string | null>(
@@ -28,8 +29,15 @@ const PollList: React.FC = () => {
       const activePolls = await pollApi.getActivePolls();
       const finishedPolls = await pollApi.getFinishedPolls();
 
+      // Fetch pending polls (polls in REVIEW status) created by the current user
+      let pendingPolls: Poll[] = [];
+      if (user && !isAdmin && isKycVerified) {
+        pendingPolls = await pollApi.getMyPendingPolls();
+      }
+
       setActivePolls(activePolls);
       setFinishedPolls(finishedPolls);
+      setPendingPolls(pendingPolls);
       setError('');
     } catch (err) {
       console.error('Error fetching polls:', err);
@@ -49,12 +57,14 @@ const PollList: React.FC = () => {
             <Badge bg={isActive ? 'success' : 'secondary'}>
               {isActive ? 'Active' : 'Finished'}
             </Badge>
-            <small>
-              {isActive 
-                ? `Ends: ${new Date(poll.plannedEndDate || 0).toLocaleDateString()}`
-                : `Ended: ${new Date(poll.plannedEndDate || 0).toLocaleDateString()}`
-              }
-            </small>
+            {poll.plannedEndDate
+                ? <small>
+                    {isActive
+                        ? `Ends: ${new Date((poll.plannedEndDate || 0) * 1000).toUTCString()}`
+                        : `Ended: ${new Date((poll.plannedEndDate || 0) * 1000).toUTCString()}`
+                    }
+                  </small>
+                : <small>Poll was finished by creator on {new Date(poll.updatedAt * 1000).toUTCString()}</small>}
           </Card.Header>
           <Card.Body>
             <Card.Title>{poll.title}</Card.Title>
@@ -69,18 +79,65 @@ const PollList: React.FC = () => {
             </div>
           </Card.Body>
           <Card.Footer className="text-muted">
-            <small>Created: {new Date(poll.createdAt).toLocaleDateString()}</small>
+            <small>Created: {new Date(poll.createdAt * 1000).toUTCString()}</small>
           </Card.Footer>
         </Card>
       </Col>
     );
   };
 
-  if (!isKycVerified && !isAdmin) {
+  const renderPendingPollCard = (poll: Poll) => {
+    let badgeVariant = "warning";
+    let badgeText = "Pending Approval";
+    let buttonVariant = "warning";
+
+    if (poll.status === PollStatus.DECLINED) {
+      badgeVariant = "danger";
+      badgeText = "Rejected";
+      buttonVariant = "danger";
+    } else if (poll.status === PollStatus.APPROVED_AND_WAITING) {
+      badgeVariant = "info";
+      badgeText = "Approved & Waiting";
+      buttonVariant = "info";
+    }
+
+    return (
+      <Col md={6} lg={4} className="mb-4" key={poll.id}>
+        <Card>
+          <Card.Header className="d-flex justify-content-between align-items-center">
+            <Badge bg={badgeVariant}>{badgeText}</Badge>
+            <small>
+              {poll.plannedStartDate 
+                ? `Planned start: ${new Date(poll.plannedStartDate * 1000).toUTCString()}`
+                : 'No start date set'}
+            </small>
+          </Card.Header>
+          <Card.Body>
+            <Card.Title>{poll.title}</Card.Title>
+            <Card.Text>{poll.description}</Card.Text>
+            <div className="d-grid gap-2">
+              <Button 
+                variant={buttonVariant} 
+                onClick={() => navigate(`/polls/${poll.id}`)}
+              >
+                View & Edit
+              </Button>
+            </div>
+          </Card.Body>
+          <Card.Footer className="text-muted">
+            <small>Created: {new Date(poll.createdAt * 1000).toUTCString()}</small>
+          </Card.Footer>
+        </Card>
+      </Col>
+    );
+  };
+
+  // Only show this warning for logged-in users who are not KYC verified
+  if (user && !isKycVerified && !isAdmin) {
     return (
       <Container className="mt-5">
         <Alert variant="warning">
-          Your account needs to be verified before you can access polls.
+          Your account needs to be verified before you can create or vote in polls.
         </Alert>
       </Container>
     );
@@ -90,7 +147,7 @@ const PollList: React.FC = () => {
     <Container className="mt-4">
       <div className="d-flex justify-content-between align-items-center mb-4">
         <h2>Polls</h2>
-        {isKycVerified && (
+        {isKycVerified && !isAdmin && (
           <Button variant="success" onClick={() => navigate("/polls/create")}>
             Create New Poll
           </Button>
@@ -104,6 +161,20 @@ const PollList: React.FC = () => {
         <div className="text-center py-5">Loading polls...</div>
       ) : (
         <>
+          {/* Pending Polls Section - Only visible to non-admin users with KYC verification */}
+          {!isAdmin && isKycVerified && pendingPolls.length > 0 && (
+            <>
+              <h3>My Polls</h3>
+              <Alert variant="info">
+                These polls are in various stages of the approval process. You can view and edit all of them, including those that are pending approval, rejected, or approved and waiting to start.
+              </Alert>
+              <Row>
+                {pendingPolls.map(renderPendingPollCard)}
+              </Row>
+              <hr className="my-4" />
+            </>
+          )}
+
           <h3>Active Polls</h3>
           {activePolls.length === 0 ? (
             <Alert variant="info">No active polls available.</Alert>

@@ -6,6 +6,7 @@ interface ProtectedRouteProps {
   requireAuth?: boolean;
   requireAdmin?: boolean;
   requireKyc?: boolean;
+  requireStudent?: boolean;
   redirectTo?: string;
 }
 
@@ -13,6 +14,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   requireAuth = true,
   requireAdmin = false,
   requireKyc = false,
+  requireStudent = false,
   redirectTo = '/login',
 }) => {
   const { isAuthenticated, isAdmin, isKycVerified, isLoading } = useAuth();
@@ -26,7 +28,8 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   const isAuthorized =
     (!requireAuth || isAuthenticated) &&
     (!requireAdmin || isAdmin) &&
-    (!requireKyc || isKycVerified);
+    (!requireKyc || isKycVerified) &&
+    (!requireStudent || !isAdmin);
 
   // Redirect if not authorized
   if (!isAuthorized) {

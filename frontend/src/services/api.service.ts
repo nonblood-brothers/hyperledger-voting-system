@@ -1,8 +1,15 @@
 import axios from 'axios';
 
-// Create axios instance with base URL
+// Create axios instance with base URL that uses the current host
+const getBaseUrl = () => {
+  // Get the current host (protocol + hostname + port)
+  const host = window.location.origin;
+  // Return the API URL using the current host
+  return `${host}/api`;
+};
+
 const api = axios.create({
-  baseURL: process.env.REACT_APP_API_URL || 'http://localhost:3001/api',
+  baseURL: getBaseUrl(),
 });
 
 // Add request interceptor to add auth token to requests
