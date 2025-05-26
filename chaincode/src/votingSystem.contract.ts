@@ -268,18 +268,7 @@ export class VotingSystemContract extends Contract {
         // Check if poll status should be updated based on dates
         poll = await this.checkAndUpdatePollStatus(ctx, poll);
 
-        // If poll is already ACTIVE or FINISHED after date check, inform the user
-        if (poll.status === PollStatus.ACTIVE) {
-            throw new Error(`Poll with id ${pollId} is already active (automatically activated based on plannedStartDate)`)
-        }
-
-        if (poll.status === PollStatus.FINISHED) {
-            throw new Error(`Poll with id ${pollId} is already finished (automatically finished based on plannedEndDate)`)
-        }
-
-        if (poll.status !== PollStatus.APPROVED_AND_WAITING ||
-            (poll.plannedStartDate !== null && ctx.stub.getTxTimestamp().seconds.toNumber() < poll.plannedStartDate)
-        ) {
+        if (poll.status !== PollStatus.APPROVED_AND_WAITING) {
             throw new Error(`You can't start a poll that is not in ${PollStatus.APPROVED_AND_WAITING} status or hasn't reached its planned start date yet`)
         }
 
