@@ -1,4 +1,4 @@
-# Electronic Voting System - System Programmer's Guide
+# Electronic Voting System
 
 ## 1. Introduction
 
