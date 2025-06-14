@@ -81,8 +81,8 @@ nvm use 18
 
 #### Step 3: Clone the Repository
 ```bash
-git clone https://github.com/your-organization/voting_system.git
-cd voting_system
+git clone https://github.com/nonblood-brothers/hyperledger-voting-system.git
+cd hyperledger-voting-system
 ```
 
 #### Step 4: Install Hyperledger Fabric Binaries
